@@ -16,7 +16,7 @@ st.set_page_config(
     page_title="UnderScore — Sports Analytics",
     page_icon="⚽",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ─── Paths ────────────────────────────────────────────────────
@@ -61,21 +61,67 @@ st.markdown(f"""
         100% {{ transform: translateY(-10vh) rotate(720deg); opacity: 0; }}
     }}
 
-    /* ── Sidebar ── */
-    [data-testid="stSidebar"] {{
-        background: linear-gradient(180deg, #0d1117 0%, #1a1d27 100%);
-        border-right: 1px solid rgba(59,130,246,0.15);
-    }}
-    [data-testid="stSidebar"] .stRadio > label {{ color: #8892a4; }}
+    /* ── Hide Sidebar completely ── */
+    [data-testid="stSidebar"] {{ display: none; }}
+    button[kind="header"] {{ display: none; }}
+    [data-testid="collapsedControl"] {{ display: none; }}
 
-    /* ── Logo ── */
-    .main-title {{ font-size: 2.2rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 0; }}
-    .logo-white {{ color: #fff; }}
-    .logo-blue  {{ color: #3b82f6; text-shadow: 0 0 20px rgba(59,130,246,0.4); }}
-    .logo-bar {{
-        height: 3px;
-        background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
-        border-radius: 2px; margin-top: 6px; margin-bottom: 1.5rem; width: 140px;
+    /* ── Top Navigation Bar ── */
+    .topnav {{
+        position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+        background: rgba(13,17,23,0.92);
+        backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid rgba(59,130,246,0.12);
+        padding: 0 2rem;
+        display: flex; align-items: center; justify-content: space-between;
+        height: 64px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+    }}
+    .topnav-logo {{
+        font-size: 1.6rem; font-weight: 800; letter-spacing: -1px;
+        display: flex; align-items: center; gap: 0; flex-shrink: 0;
+    }}
+    .topnav-logo .logo-white {{ color: #fff; }}
+    .topnav-logo .logo-blue  {{ color: #3b82f6; text-shadow: 0 0 20px rgba(59,130,246,0.4); }}
+    .topnav-links {{
+        display: flex; align-items: center; gap: 0.25rem;
+    }}
+    .topnav-links a {{
+        color: #8892a4; text-decoration: none;
+        font-size: 0.88rem; font-weight: 600;
+        padding: 0.5rem 1rem; border-radius: 8px;
+        transition: all 0.25s ease;
+        white-space: nowrap;
+    }}
+    .topnav-links a:hover {{
+        color: #e8eaf0; background: rgba(59,130,246,0.1);
+    }}
+    .topnav-links a.active {{
+        color: #3b82f6; background: rgba(59,130,246,0.15);
+        box-shadow: 0 0 12px rgba(59,130,246,0.1);
+    }}
+    .topnav-accent {{
+        position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+        background: linear-gradient(90deg, transparent, #3b82f6, #8b5cf6, #06b6d4, transparent);
+    }}
+    /* Push content below fixed topbar */
+    .main .block-container {{ padding-top: 5rem !important; }}
+
+    /* ── Mobile responsive topbar ── */
+    @media (max-width: 768px) {{
+        .topnav {{
+            flex-direction: column; height: auto;
+            padding: 0.75rem 1rem; gap: 0.5rem;
+        }}
+        .topnav-links {{
+            width: 100%; overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            gap: 0.15rem; padding-bottom: 0.25rem;
+        }}
+        .topnav-links a {{
+            font-size: 0.78rem; padding: 0.4rem 0.7rem;
+        }}
+        .main .block-container {{ padding-top: 7.5rem !important; }}
     }}
 
     /* ── Glassmorphism Cards ── */
@@ -322,23 +368,37 @@ def probability_chart(home_prob, draw_prob, away_prob):
     return fig
 
 
-# ─── Sidebar ─────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown(
-        '<div class="main-title"><span class="logo-white">Under</span>'
-        '<span class="logo-blue">Score</span></div>'
-        '<div class="logo-bar"></div>',
-        unsafe_allow_html=True,
-    )
+# ─── Top Navigation Bar ───────────────────────────────────────
+PAGES = ["📊 Dashboard", "⚡ Match Predictor", "🛡 Insurance Pricing", "📁 Batch Predict"]
 
-    page = st.radio(
-        "Navigation",
-        ["📊 Dashboard", "⚡ Match Predictor", "🛡 Insurance Pricing", "📁 Batch Predict"],
-        label_visibility="collapsed",
-    )
+if "page" not in st.session_state:
+    st.session_state.page = PAGES[0]
 
-    st.markdown("---")
-    st.caption("PSL · AI Engine")
+# Render the HTML top bar
+def _nav_link(label, is_active):
+    cls = ' class="active"' if is_active else ''
+    return f'<a href="?page={label}"{cls}>{label}</a>'
+
+nav_html = (
+    '<div class="topnav">'
+    '  <div class="topnav-logo"><span class="logo-white">Under</span><span class="logo-blue">Score</span></div>'
+    '  <div class="topnav-links">'
+    + ''.join(_nav_link(p, p == st.session_state.page) for p in PAGES)
+    + '  </div>'
+    '  <div class="topnav-accent"></div>'
+    '</div>'
+)
+st.markdown(nav_html, unsafe_allow_html=True)
+
+# Handle page switching via query params
+qp = st.query_params
+if "page" in qp:
+    requested = qp["page"]
+    if requested in PAGES and requested != st.session_state.page:
+        st.session_state.page = requested
+        st.rerun()
+
+page = st.session_state.page
 
 
 # ═══════════════════════════════════════════════════════════════
