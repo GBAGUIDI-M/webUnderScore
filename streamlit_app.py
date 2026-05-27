@@ -24,183 +24,176 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(BASE_DIR, "models_pkl")
 
 # ─── Custom CSS ───────────────────────────────────────────────
-st.markdown("""
+STADIUM_BG = "https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1920&q=80"
+
+st.markdown(f"""
 <style>
-    /* Import modern font */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    html, body, [class*="st-"] {{ font-family: 'Inter', sans-serif; }}
 
-    html, body, [class*="st-"] {
-        font-family: 'Inter', sans-serif;
-    }
+    /* ── Stadium Background ── */
+    .stApp {{
+        background: linear-gradient(180deg, rgba(15,17,23,0.92) 0%, rgba(15,17,23,0.85) 50%, rgba(15,17,23,0.95) 100%),
+                    url('{STADIUM_BG}') center/cover no-repeat fixed;
+    }}
 
-    /* Header styling */
-    .main-title {
-        font-size: 2.2rem;
-        font-weight: 800;
-        letter-spacing: -1px;
-        margin-bottom: 0;
-    }
-    .logo-white { color: #ffffff; }
-    .logo-blue  { color: #3b82f6; }
-    .logo-bar {
+    /* ── Floating Football Particles ── */
+    .football-particles {{
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        pointer-events: none; z-index: 0; overflow: hidden;
+    }}
+    .football-particles span {{
+        position: absolute; font-size: 1.5rem; opacity: 0.06;
+        animation: floatUp linear infinite;
+    }}
+    .football-particles span:nth-child(1) {{ left: 5%;  animation-duration: 18s; animation-delay: 0s; }}
+    .football-particles span:nth-child(2) {{ left: 15%; animation-duration: 22s; animation-delay: 3s; font-size: 2rem; }}
+    .football-particles span:nth-child(3) {{ left: 30%; animation-duration: 16s; animation-delay: 7s; }}
+    .football-particles span:nth-child(4) {{ left: 50%; animation-duration: 25s; animation-delay: 2s; font-size: 1.2rem; }}
+    .football-particles span:nth-child(5) {{ left: 65%; animation-duration: 20s; animation-delay: 5s; }}
+    .football-particles span:nth-child(6) {{ left: 80%; animation-duration: 19s; animation-delay: 8s; font-size: 1.8rem; }}
+    .football-particles span:nth-child(7) {{ left: 90%; animation-duration: 23s; animation-delay: 1s; }}
+    .football-particles span:nth-child(8) {{ left: 42%; animation-duration: 17s; animation-delay: 6s; font-size: 2.2rem; }}
+    @keyframes floatUp {{
+        0%   {{ transform: translateY(110vh) rotate(0deg); opacity: 0; }}
+        10%  {{ opacity: 0.07; }}
+        90%  {{ opacity: 0.05; }}
+        100% {{ transform: translateY(-10vh) rotate(720deg); opacity: 0; }}
+    }}
+
+    /* ── Sidebar ── */
+    [data-testid="stSidebar"] {{
+        background: linear-gradient(180deg, #0d1117 0%, #1a1d27 100%);
+        border-right: 1px solid rgba(59,130,246,0.15);
+    }}
+    [data-testid="stSidebar"] .stRadio > label {{ color: #8892a4; }}
+
+    /* ── Logo ── */
+    .main-title {{ font-size: 2.2rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 0; }}
+    .logo-white {{ color: #fff; }}
+    .logo-blue  {{ color: #3b82f6; text-shadow: 0 0 20px rgba(59,130,246,0.4); }}
+    .logo-bar {{
         height: 3px;
-        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-        border-radius: 2px;
-        margin-top: 6px;
-        margin-bottom: 1.5rem;
-        width: 120px;
-    }
+        background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
+        border-radius: 2px; margin-top: 6px; margin-bottom: 1.5rem; width: 140px;
+    }}
 
-    /* Cards */
-    .metric-card {
-        background: #1a1d27;
-        border: 1px solid #2a2f45;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin-bottom: 1rem;
-    }
-    .metric-card-label {
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #8892a4;
-        margin-bottom: 0.5rem;
-    }
-    .metric-card-value {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #ffffff;
-    }
-    .metric-card-value.green { color: #10b981; }
-    .metric-card-sub {
-        font-size: 0.8rem;
-        color: #8892a4;
-        margin-top: 0.35rem;
-    }
+    /* ── Glassmorphism Cards ── */
+    .metric-card {{
+        background: rgba(26,29,39,0.75);
+        backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(59,130,246,0.12);
+        border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+    }}
+    .metric-card:hover {{
+        border-color: rgba(59,130,246,0.35);
+        box-shadow: 0 8px 32px rgba(59,130,246,0.1);
+        transform: translateY(-2px);
+    }}
+    .metric-card-label {{
+        font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.06em; color: #8892a4; margin-bottom: 0.5rem;
+    }}
+    .metric-card-value {{ font-size: 1.5rem; font-weight: 700; color: #fff; }}
+    .metric-card-value.green {{ color: #10b981; text-shadow: 0 0 12px rgba(16,185,129,0.3); }}
+    .metric-card-sub {{ font-size: 0.8rem; color: #8892a4; margin-top: 0.35rem; }}
 
-    /* Result display */
-    .result-box {
-        background: linear-gradient(135deg, #1e3a5f, #1a2d4a);
-        border-radius: 12px;
-        padding: 1.5rem;
-        text-align: center;
-        margin: 1rem 0;
-    }
-    .result-label {
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.07em;
-        color: #93c5fd;
-        margin-bottom: 0.3rem;
-    }
-    .result-value {
-        font-size: 1.8rem;
-        font-weight: 800;
-        color: #ffffff;
-    }
+    /* ── Result Box ── */
+    .result-box {{
+        background: linear-gradient(135deg, rgba(30,58,95,0.9), rgba(26,45,74,0.9));
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(59,130,246,0.2);
+        border-radius: 16px; padding: 2rem; text-align: center; margin: 1rem 0;
+        box-shadow: 0 0 30px rgba(59,130,246,0.08);
+    }}
+    .result-label {{
+        font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.07em; color: #93c5fd; margin-bottom: 0.5rem;
+    }}
+    .result-value {{
+        font-size: 2rem; font-weight: 800; color: #fff;
+        text-shadow: 0 0 20px rgba(59,130,246,0.3);
+    }}
 
-    /* Insurance premium */
-    .premium-box {
-        background: linear-gradient(135deg, #1e3a5f, #1a2d4a);
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin-bottom: 1rem;
-    }
-    .premium-label {
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: #93c5fd;
-        margin-bottom: 0.5rem;
-    }
-    .premium-value {
-        font-size: 2.2rem;
-        font-weight: 800;
-        color: #ffffff;
-    }
-    .premium-sub {
-        font-size: 0.8rem;
-        color: #93c5fd;
-        margin-top: 0.2rem;
-    }
+    /* ── Premium Box ── */
+    .premium-box {{
+        background: linear-gradient(135deg, rgba(30,58,95,0.9), rgba(26,45,74,0.9));
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(59,130,246,0.2);
+        border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem;
+        box-shadow: 0 0 30px rgba(59,130,246,0.08);
+    }}
+    .premium-label {{
+        font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.08em; color: #93c5fd; margin-bottom: 0.5rem;
+    }}
+    .premium-value {{
+        font-size: 2.4rem; font-weight: 800; color: #fff;
+        text-shadow: 0 0 20px rgba(59,130,246,0.3);
+    }}
+    .premium-sub {{ font-size: 0.8rem; color: #93c5fd; margin-top: 0.2rem; }}
 
-    /* Interpretation box */
-    .interpretation-box {
+    /* ── Interpretation ── */
+    .interpretation-box {{
         background: rgba(59,130,246,0.05);
-        border: 1px dashed #3b82f6;
-        padding: 1.25rem;
-        border-radius: 8px;
-        margin-top: 1rem;
-    }
-    .interpretation-title {
-        font-size: 0.85rem;
-        margin-bottom: 0.75rem;
-        color: #3b82f6;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    .interpretation-text {
-        font-size: 0.88rem;
-        color: #8892a4;
-        line-height: 1.6;
-    }
+        backdrop-filter: blur(8px);
+        border: 1px dashed rgba(59,130,246,0.3);
+        padding: 1.25rem; border-radius: 12px; margin-top: 1rem;
+    }}
+    .interpretation-title {{
+        font-size: 0.85rem; margin-bottom: 0.75rem; color: #3b82f6;
+        font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    }}
+    .interpretation-text {{ font-size: 0.88rem; color: #8892a4; line-height: 1.6; }}
 
-    /* Badge */
-    .badge-red {
-        background: rgba(239,68,68,0.15);
-        color: #f87171;
+    /* ── Badge ── */
+    .badge-red {{
+        background: rgba(239,68,68,0.15); color: #f87171;
         border: 1px solid rgba(239,68,68,0.3);
-        padding: 0.25rem 0.75rem;
-        border-radius: 999px;
-        font-weight: 700;
-        font-size: 0.9rem;
-        display: inline-block;
-    }
+        padding: 0.25rem 0.75rem; border-radius: 999px;
+        font-weight: 700; font-size: 0.9rem; display: inline-block;
+    }}
 
-    /* Profit row */
-    .profit-row {
-        background: rgba(16,185,129,0.08);
-        padding: 0.75rem;
-        border-radius: 8px;
-        border: 1px solid rgba(16,185,129,0.2);
-    }
-    .profit-value {
-        color: #10b981;
-        font-weight: 700;
-        font-size: 1.1rem;
-    }
+    /* ── Profit Row ── */
+    .profit-row {{
+        background: rgba(16,185,129,0.08); padding: 0.75rem;
+        border-radius: 8px; border: 1px solid rgba(16,185,129,0.2);
+    }}
+    .profit-value {{ color: #10b981; font-weight: 700; font-size: 1.1rem; }}
 
-    /* Hide Streamlit branding */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
+    /* ── Hide Streamlit Chrome ── */
+    #MainMenu {{visibility: hidden;}}
+    footer {{visibility: hidden;}}
+    header {{visibility: hidden;}}
 
-    /* Sidebar styling */
-    [data-testid="stSidebar"] {
-        background: #1a1d27;
-        border-right: 1px solid #2a2f45;
-    }
-    [data-testid="stSidebar"] .stRadio > label {
-        color: #8892a4;
-    }
+    /* ── Table ── */
+    .stDataFrame {{ border-radius: 12px; overflow: hidden; }}
 
-    /* Table styling */
-    .stDataFrame {
-        border-radius: 12px;
-        overflow: hidden;
-    }
+    /* ── Divider ── */
+    .section-divider {{ height: 1px; background: linear-gradient(90deg, transparent, #2a2f45, transparent); margin: 1.5rem 0; }}
 
-    /* Divider */
-    .section-divider {
-        height: 1px;
-        background: #2a2f45;
-        margin: 1.5rem 0;
-    }
+    /* ── Streamlit elements polish ── */
+    .stSelectbox > div > div {{ background: rgba(26,29,39,0.8); border-color: #2a2f45; }}
+    .stNumberInput > div > div > input {{ background: rgba(26,29,39,0.8); }}
+    button[kind="primary"] {{
+        background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+        border: none !important;
+        box-shadow: 0 4px 15px rgba(59,130,246,0.3) !important;
+        transition: all 0.3s ease !important;
+    }}
+    button[kind="primary"]:hover {{
+        box-shadow: 0 6px 25px rgba(59,130,246,0.5) !important;
+        transform: translateY(-1px) !important;
+    }}
 </style>
+
+<!-- Floating football particles -->
+<div class="football-particles">
+    <span>⚽</span><span>⚽</span><span>⚽</span><span>⚽</span>
+    <span>⚽</span><span>⚽</span><span>⚽</span><span>⚽</span>
+</div>
 """, unsafe_allow_html=True)
 
 
