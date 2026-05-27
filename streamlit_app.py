@@ -233,6 +233,32 @@ st.markdown(f"""
         box-shadow: 0 6px 25px rgba(59,130,246,0.5) !important;
         transform: translateY(-1px) !important;
     }}
+
+    /* ── Mobile responsive content ── */
+    @media (max-width: 768px) {{
+        /* Stack Streamlit columns vertically */
+        [data-testid="stHorizontalBlock"] {{
+            flex-direction: column !important;
+        }}
+        [data-testid="stHorizontalBlock"] > div {{
+            width: 100% !important; flex: 1 1 100% !important;
+        }}
+        /* Smaller text and padding */
+        .metric-card {{ padding: 1rem; border-radius: 12px; }}
+        .metric-card-value {{ font-size: 1.2rem; }}
+        .result-value {{ font-size: 1.4rem; }}
+        .premium-value {{ font-size: 1.6rem; }}
+        .premium-box, .result-box {{ padding: 1rem; border-radius: 12px; }}
+        .interpretation-box {{ padding: 1rem; }}
+        .interpretation-text {{ font-size: 0.82rem; }}
+        /* Table horizontal scroll */
+        .stDataFrame {{ overflow-x: auto; }}
+        /* General padding */
+        .main .block-container {{
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }}
+    }}
 </style>
 
 <!-- Floating football particles -->
