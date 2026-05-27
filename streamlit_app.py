@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-import streamlit.components.v1 as components
 from scipy.stats import poisson
 
 # ─── Configuration ────────────────────────────────────────────
@@ -127,8 +126,37 @@ st.markdown(f"""
     .topnav-links svg {{ width: 16px; height: 16px; }}
 
     /* ── Mobile: hide topbar, add bottom padding ── */
+    .mob-bar {{ display: none; }}
     @media (max-width: 768px) {{
         .topnav {{ display: none !important; }}
+        .mob-bar {{
+            display: block !important;
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 99999;
+            background: rgba(13,17,23,0.97);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(59,130,246,0.12);
+            box-shadow: 0 -4px 30px rgba(0,0,0,0.5);
+            padding: 6px 0 max(10px, env(safe-area-inset-bottom)) 0;
+        }}
+        .mob-bar-inner {{
+            display: flex; justify-content: space-around; align-items: center;
+        }}
+        .mob-item {{
+            display: flex; flex-direction: column; align-items: center;
+            gap: 2px; padding: 6px 8px; border-radius: 10px;
+            color: #6b7280; font-size: 10px; font-weight: 600;
+            text-decoration: none; flex: 1; text-align: center;
+            transition: all 0.2s ease;
+        }}
+        .mob-item:active {{ transform: scale(0.92); }}
+        .mob-item.mob-active {{
+            color: #3b82f6; background: rgba(59,130,246,0.1);
+        }}
+        .mob-item .mob-icon {{ display: block; width: 22px; height: 22px; margin: 0 auto; }}
+        .mob-item .mob-icon svg {{ width: 100%; height: 100%; }}
+        .mob-item.mob-active .mob-icon svg {{
+            filter: drop-shadow(0 0 4px rgba(59,130,246,0.5));
+        }}
         .main .block-container {{
             padding-top: 1rem !important;
             padding-bottom: 5.5rem !important;
@@ -443,52 +471,19 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ─── Mobile: bottom bar via components.html (real JS, clickable) ───
+# ─── Mobile: bottom bar via st.markdown + <a> links ───
 def _mob_item_html(idx):
-    active = ' active' if idx == current_idx else ''
-    return (f'<div class="item{active}" onclick="go(\'{PAGE_KEYS[idx]}\')">' 
-            f'<div class="icon">{PAGE_SVGS[idx]}</div>'
-            f'<div class="label">{PAGE_NAMES[idx].split()[0]}</div></div>')
+    active = ' mob-active' if idx == current_idx else ''
+    return (f'<a href="?p={PAGE_KEYS[idx]}" class="mob-item{active}">'
+            f'<span class="mob-icon">{PAGE_SVGS[idx]}</span>'
+            f'<span class="mob-label">{PAGE_NAMES[idx].split()[0]}</span></a>')
 
-mobile_html = f"""
-<style>
-  * {{ margin:0; padding:0; box-sizing:border-box; }}
-  body {{ background: transparent; }}
-  .bar {{
-    position:fixed; bottom:0; left:0; right:0;
-    background: rgba(13,17,23,0.97);
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border-top: 1px solid rgba(59,130,246,0.12);
-    box-shadow: 0 -4px 30px rgba(0,0,0,0.5);
-    display:flex; justify-content:space-around; align-items:center;
-    padding: 6px 4px 10px 4px;
-    font-family: 'Inter', -apple-system, sans-serif;
-  }}
-  .item {{
-    display:flex; flex-direction:column; align-items:center;
-    gap:2px; padding:6px 8px; border-radius:10px;
-    color:#6b7280; font-size:10px; font-weight:600;
-    cursor:pointer; transition: all 0.2s; flex:1;
-    text-align:center;
-  }}
-  .item:active {{ transform: scale(0.92); }}
-  .item.active {{ color:#3b82f6; background:rgba(59,130,246,0.1); }}
-  .item .icon {{ width:22px; height:22px; }}
-  .item .icon svg {{ width:100%; height:100%; }}
-  .item.active .icon svg {{ filter: drop-shadow(0 0 4px rgba(59,130,246,0.5)); }}
-  .item .label {{ margin-top:1px; }}
-  @media (min-width: 769px) {{ .bar {{ display:none; }} }}
-</style>
-<div class="bar">
-  {''.join(_mob_item_html(i) for i in range(len(PAGE_KEYS)))}
-</div>
-<script>
-  function go(pageKey) {{
-    window.parent.location.href = window.parent.location.pathname + '?p=' + pageKey;
-  }}
-</script>
-"""
-components.html(mobile_html, height=0)
+st.markdown(
+    '<div class="mob-bar"><div class="mob-bar-inner">'
+    + ''.join(_mob_item_html(i) for i in range(len(PAGE_KEYS)))
+    + '</div></div>',
+    unsafe_allow_html=True,
+)
 
 # Map to page display name
 page = PAGE_NAMES[current_idx]
