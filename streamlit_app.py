@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as components
 from scipy.stats import poisson
 
 # ─── Configuration ────────────────────────────────────────────
@@ -107,64 +108,27 @@ st.markdown(f"""
     /* Push content below fixed topbar */
     .main .block-container {{ padding-top: 5rem !important; }}
 
-    /* ── Hide Streamlit nav buttons visually on desktop (keep functional) ── */
-    .nav-buttons-row {{
-        position: fixed; top: 10px; right: 2rem; z-index: 10000;
-        display: flex; gap: 0.3rem;
+    /* ── Desktop nav links in topbar ── */
+    .topnav-links {{
+        display: flex; align-items: center; gap: 0.25rem;
     }}
-    .nav-buttons-row button {{
-        background: transparent !important; border: 1px solid transparent !important;
-        color: #8892a4 !important; font-size: 0.82rem !important;
-        padding: 0.45rem 1rem !important; font-weight: 600 !important;
-        white-space: nowrap !important; box-shadow: none !important;
-        border-radius: 8px !important;
-        transition: all 0.25s ease !important; cursor: pointer !important;
+    .topnav-links a {{
+        color: #8892a4; text-decoration: none;
+        font-size: 0.85rem; font-weight: 600;
+        padding: 0.5rem 1rem; border-radius: 8px;
+        transition: all 0.25s ease; white-space: nowrap;
+        display: flex; align-items: center; gap: 0.4rem;
     }}
-    .nav-buttons-row button:hover {{
-        color: #e8eaf0 !important; background: rgba(59,130,246,0.1) !important;
+    .topnav-links a:hover {{ color: #e8eaf0; background: rgba(59,130,246,0.1); }}
+    .topnav-links a.active {{
+        color: #3b82f6; background: rgba(59,130,246,0.15);
+        box-shadow: 0 0 12px rgba(59,130,246,0.08);
     }}
-    .nav-buttons-row button[kind="primary"] {{
-        color: #3b82f6 !important; background: rgba(59,130,246,0.15) !important;
-        box-shadow: 0 0 12px rgba(59,130,246,0.08) !important;
-    }}
+    .topnav-links svg {{ width: 16px; height: 16px; }}
 
-    /* ── Mobile Bottom Bar (HTML) ── */
-    .mobile-bottombar {{
-        display: none;
-        position: fixed; bottom: 0; left: 0; right: 0; z-index: 99999;
-        background: rgba(13,17,23,0.97);
-        backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-        border-top: 1px solid rgba(59,130,246,0.12);
-        box-shadow: 0 -4px 30px rgba(0,0,0,0.5);
-        padding: 0.35rem 0 0.55rem 0;
-    }}
-    .mobile-bottombar-inner {{
-        display: flex; justify-content: space-around; align-items: center;
-    }}
-    .mob-nav-item {{
-        display: flex; flex-direction: column; align-items: center;
-        gap: 3px; padding: 0.3rem 0.5rem; border-radius: 10px;
-        text-decoration: none; color: #6b7280;
-        font-size: 0.62rem; font-weight: 600;
-        transition: all 0.2s ease; cursor: pointer;
-        min-width: 60px;
-    }}
-    .mob-nav-item:hover {{ color: #93c5fd; }}
-    .mob-nav-item.active {{
-        color: #3b82f6;
-        background: rgba(59,130,246,0.1);
-    }}
-    .mob-nav-item .mob-icon {{
-        font-size: 1.25rem; line-height: 1;
-    }}
-    .mob-nav-item.active .mob-icon {{
-        filter: drop-shadow(0 0 6px rgba(59,130,246,0.5));
-    }}
-
+    /* ── Mobile: hide topbar, add bottom padding ── */
     @media (max-width: 768px) {{
         .topnav {{ display: none !important; }}
-        .nav-buttons-row {{ display: none !important; }}
-        .mobile-bottombar {{ display: block !important; }}
         .main .block-container {{
             padding-top: 1rem !important;
             padding-bottom: 5.5rem !important;
@@ -447,63 +411,93 @@ def probability_chart(home_prob, draw_prob, away_prob):
 
 
 # ─── Navigation ───────────────────────────────────────────────
-PAGES = ["📊 Dashboard", "⚡ Match Predictor", "🛡 Insurance Pricing", "📁 Batch Predict"]
-PAGE_ICONS = ["📊", "⚡", "🛡", "📁"]
-PAGE_SHORT = ["Dashboard", "Predictor", "Insurance", "Batch"]
+PAGE_KEYS  = ["dashboard", "predict", "insurance", "batch"]
+PAGE_NAMES = ["Dashboard", "Match Predictor", "Insurance Pricing", "Batch Predict"]
+# SVG paths for clean icons (no emojis)
+PAGE_SVGS = [
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L4 6v6c0 5.5 3.5 10.7 8 12 4.5-1.3 8-6.5 8-12V6z"/></svg>',
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
+]
 
-if "page" not in st.session_state:
-    st.session_state.page = PAGES[0]
+# Read current page from query params
+qp = st.query_params
+current_key = qp.get("p", "dashboard")
+if current_key not in PAGE_KEYS:
+    current_key = "dashboard"
+current_idx = PAGE_KEYS.index(current_key)
 
-# Desktop: topbar logo
+# ─── Desktop: topbar with logo + nav links ───
+def _desktop_link(idx):
+    active = ' active' if idx == current_idx else ''
+    return (f'<a href="?p={PAGE_KEYS[idx]}" class="{active}" '
+            f'target="_self">{PAGE_SVGS[idx]} {PAGE_NAMES[idx]}</a>')
+
 st.markdown(
     '<div class="topnav">'
     '  <div class="topnav-logo"><span class="logo-white">Under</span><span class="logo-blue">Score</span></div>'
+    '  <div class="topnav-links">' + ''.join(_desktop_link(i) for i in range(len(PAGE_KEYS))) + '</div>'
     '  <div class="topnav-accent"></div>'
     '</div>',
     unsafe_allow_html=True,
 )
 
-# Desktop: nav buttons (positioned via CSS into topbar)
-with st.container():
-    nav_cols = st.columns(len(PAGES))
-    for i, pg in enumerate(PAGES):
-        with nav_cols[i]:
-            btn_type = "primary" if st.session_state.page == pg else "secondary"
-            if st.button(pg, key=f"nav_{i}", type=btn_type, use_container_width=True):
-                st.session_state.page = pg
-                st.rerun()
+# ─── Mobile: bottom bar via components.html (real JS, clickable) ───
+def _mob_item_html(idx):
+    active = ' active' if idx == current_idx else ''
+    return (f'<div class="item{active}" onclick="go(\'{PAGE_KEYS[idx]}\')">' 
+            f'<div class="icon">{PAGE_SVGS[idx]}</div>'
+            f'<div class="label">{PAGE_NAMES[idx].split()[0]}</div></div>')
 
-# Mobile: pure HTML/CSS bottom bar with JS
-def _mob_item(idx, icon, label, is_active):
-    cls = 'mob-nav-item active' if is_active else 'mob-nav-item'
-    return (
-        f'<div class="{cls}" onclick="'
-        f"document.querySelectorAll('button').forEach(b => {{"
-        f"  if(b.textContent.includes('{PAGES[idx]}')) b.click();"
-        f"}});"
-        f'">'
-        f'<span class="mob-icon">{icon}</span>'
-        f'<span>{label}</span>'
-        f'</div>'
-    )
+mobile_html = f"""
+<style>
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{ background: transparent; }}
+  .bar {{
+    position:fixed; bottom:0; left:0; right:0;
+    background: rgba(13,17,23,0.97);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(59,130,246,0.12);
+    box-shadow: 0 -4px 30px rgba(0,0,0,0.5);
+    display:flex; justify-content:space-around; align-items:center;
+    padding: 6px 4px 10px 4px;
+    font-family: 'Inter', -apple-system, sans-serif;
+  }}
+  .item {{
+    display:flex; flex-direction:column; align-items:center;
+    gap:2px; padding:6px 8px; border-radius:10px;
+    color:#6b7280; font-size:10px; font-weight:600;
+    cursor:pointer; transition: all 0.2s; flex:1;
+    text-align:center;
+  }}
+  .item:active {{ transform: scale(0.92); }}
+  .item.active {{ color:#3b82f6; background:rgba(59,130,246,0.1); }}
+  .item .icon {{ width:22px; height:22px; }}
+  .item .icon svg {{ width:100%; height:100%; }}
+  .item.active .icon svg {{ filter: drop-shadow(0 0 4px rgba(59,130,246,0.5)); }}
+  .item .label {{ margin-top:1px; }}
+  @media (min-width: 769px) {{ .bar {{ display:none; }} }}
+</style>
+<div class="bar">
+  {''.join(_mob_item_html(i) for i in range(len(PAGE_KEYS)))}
+</div>
+<script>
+  function go(pageKey) {{
+    window.parent.location.href = window.parent.location.pathname + '?p=' + pageKey;
+  }}
+</script>
+"""
+components.html(mobile_html, height=0)
 
-bottom_bar_html = (
-    '<div class="mobile-bottombar"><div class="mobile-bottombar-inner">'
-    + ''.join(
-        _mob_item(i, PAGE_ICONS[i], PAGE_SHORT[i], PAGES[i] == st.session_state.page)
-        for i in range(len(PAGES))
-    )
-    + '</div></div>'
-)
-st.markdown(bottom_bar_html, unsafe_allow_html=True)
-
-page = st.session_state.page
+# Map to page display name
+page = PAGE_NAMES[current_idx]
 
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE 1: DASHBOARD
 # ═══════════════════════════════════════════════════════════════
-if page == "📊 Dashboard":
+if page == "Dashboard":
     st.markdown("## Overview")
     st.markdown('<p style="color:#8892a4; margin-top:-0.5rem;">Status of the AI prediction engine.</p>', unsafe_allow_html=True)
 
@@ -591,7 +585,7 @@ if page == "📊 Dashboard":
 # ═══════════════════════════════════════════════════════════════
 # PAGE 2: MATCH PREDICTOR
 # ═══════════════════════════════════════════════════════════════
-elif page == "⚡ Match Predictor":
+elif page == "Match Predictor":
     st.markdown("## ⚡ Match Predictor")
     st.markdown(
         '<p style="color:#8892a4; margin-top:-0.5rem;">Select two teams to get AI-driven win probabilities.</p>',
@@ -653,7 +647,7 @@ elif page == "⚡ Match Predictor":
 # ═══════════════════════════════════════════════════════════════
 # PAGE 3: INSURANCE PRICING
 # ═══════════════════════════════════════════════════════════════
-elif page == "🛡 Insurance Pricing":
+elif page == "Insurance Pricing":
     st.markdown("## 🛡 Prize Indemnity Underwriting")
     st.markdown(
         '<p style="color:#8892a4; margin-top:-0.5rem;">Turn match probabilities into actuarially priced insurance products.</p>',
@@ -763,7 +757,7 @@ elif page == "🛡 Insurance Pricing":
 # ═══════════════════════════════════════════════════════════════
 # PAGE 4: BATCH PREDICT
 # ═══════════════════════════════════════════════════════════════
-elif page == "📁 Batch Predict":
+elif page == "Batch Predict":
     st.markdown("## 📁 Batch Predictor")
     st.markdown(
         '<p style="color:#8892a4; margin-top:-0.5rem;">Upload a CSV with <code>HomeTeam</code> and <code>AwayTeam</code> columns.</p>',
