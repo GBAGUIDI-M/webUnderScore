@@ -107,47 +107,67 @@ st.markdown(f"""
     /* Push content below fixed topbar */
     .main .block-container {{ padding-top: 5rem !important; }}
 
-    /* ── Nav buttons row ── */
-    .main .block-container > div:first-child [data-testid="stHorizontalBlock"]:first-of-type {{
-        position: fixed; top: 12px; right: 2rem; z-index: 10000;
-        gap: 0.3rem !important; flex-wrap: nowrap !important;
+    /* ── Hide Streamlit nav buttons visually on desktop (keep functional) ── */
+    .nav-buttons-row {{
+        position: fixed; top: 10px; right: 2rem; z-index: 10000;
+        display: flex; gap: 0.3rem;
     }}
-    .main .block-container > div:first-child [data-testid="stHorizontalBlock"]:first-of-type button {{
+    .nav-buttons-row button {{
         background: transparent !important; border: 1px solid transparent !important;
         color: #8892a4 !important; font-size: 0.82rem !important;
-        padding: 0.4rem 0.8rem !important; font-weight: 600 !important;
+        padding: 0.45rem 1rem !important; font-weight: 600 !important;
         white-space: nowrap !important; box-shadow: none !important;
-        transition: all 0.25s ease !important;
+        border-radius: 8px !important;
+        transition: all 0.25s ease !important; cursor: pointer !important;
     }}
-    .main .block-container > div:first-child [data-testid="stHorizontalBlock"]:first-of-type button:hover {{
+    .nav-buttons-row button:hover {{
         color: #e8eaf0 !important; background: rgba(59,130,246,0.1) !important;
     }}
-    .main .block-container > div:first-child [data-testid="stHorizontalBlock"]:first-of-type button[kind="primary"] {{
+    .nav-buttons-row button[kind="primary"] {{
         color: #3b82f6 !important; background: rgba(59,130,246,0.15) !important;
-        border-color: rgba(59,130,246,0.2) !important;
-        box-shadow: 0 0 12px rgba(59,130,246,0.1) !important;
+        box-shadow: 0 0 12px rgba(59,130,246,0.08) !important;
     }}
 
-    /* ── Mobile: bottom nav bar ── */
+    /* ── Mobile Bottom Bar (HTML) ── */
+    .mobile-bottombar {{
+        display: none;
+        position: fixed; bottom: 0; left: 0; right: 0; z-index: 99999;
+        background: rgba(13,17,23,0.97);
+        backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(59,130,246,0.12);
+        box-shadow: 0 -4px 30px rgba(0,0,0,0.5);
+        padding: 0.35rem 0 0.55rem 0;
+    }}
+    .mobile-bottombar-inner {{
+        display: flex; justify-content: space-around; align-items: center;
+    }}
+    .mob-nav-item {{
+        display: flex; flex-direction: column; align-items: center;
+        gap: 3px; padding: 0.3rem 0.5rem; border-radius: 10px;
+        text-decoration: none; color: #6b7280;
+        font-size: 0.62rem; font-weight: 600;
+        transition: all 0.2s ease; cursor: pointer;
+        min-width: 60px;
+    }}
+    .mob-nav-item:hover {{ color: #93c5fd; }}
+    .mob-nav-item.active {{
+        color: #3b82f6;
+        background: rgba(59,130,246,0.1);
+    }}
+    .mob-nav-item .mob-icon {{
+        font-size: 1.25rem; line-height: 1;
+    }}
+    .mob-nav-item.active .mob-icon {{
+        filter: drop-shadow(0 0 6px rgba(59,130,246,0.5));
+    }}
+
     @media (max-width: 768px) {{
-        .topnav {{ display: none; }}
-        .main .block-container > div:first-child [data-testid="stHorizontalBlock"]:first-of-type {{
-            position: fixed !important; top: auto !important;
-            bottom: 0 !important; left: 0 !important; right: 0 !important;
-            z-index: 10000;
-            background: rgba(13,17,23,0.95) !important;
-            backdrop-filter: blur(16px) !important;
-            border-top: 1px solid rgba(59,130,246,0.15);
-            box-shadow: 0 -4px 24px rgba(0,0,0,0.4);
-            padding: 0.4rem 0.25rem !important;
-            gap: 0.1rem !important;
-        }}
-        .main .block-container > div:first-child [data-testid="stHorizontalBlock"]:first-of-type button {{
-            font-size: 0.62rem !important; padding: 0.5rem 0.2rem !important;
-        }}
+        .topnav {{ display: none !important; }}
+        .nav-buttons-row {{ display: none !important; }}
+        .mobile-bottombar {{ display: block !important; }}
         .main .block-container {{
-            padding-top: 1.5rem !important;
-            padding-bottom: 5rem !important;
+            padding-top: 1rem !important;
+            padding-bottom: 5.5rem !important;
         }}
     }}
 
@@ -426,30 +446,56 @@ def probability_chart(home_prob, draw_prob, away_prob):
     return fig
 
 
-# ─── Top Navigation Bar ───────────────────────────────────────
+# ─── Navigation ───────────────────────────────────────────────
 PAGES = ["📊 Dashboard", "⚡ Match Predictor", "🛡 Insurance Pricing", "📁 Batch Predict"]
+PAGE_ICONS = ["📊", "⚡", "🛡", "📁"]
+PAGE_SHORT = ["Dashboard", "Predictor", "Insurance", "Batch"]
 
 if "page" not in st.session_state:
     st.session_state.page = PAGES[0]
 
-# Render logo in the topbar via HTML
+# Desktop: topbar logo
 st.markdown(
     '<div class="topnav">'
     '  <div class="topnav-logo"><span class="logo-white">Under</span><span class="logo-blue">Score</span></div>'
-    '  <div class="topnav-links" id="nav-placeholder"></div>'
     '  <div class="topnav-accent"></div>'
     '</div>',
     unsafe_allow_html=True,
 )
 
-# Navigation buttons (no page reload)
-nav_cols = st.columns(len(PAGES))
-for i, pg in enumerate(PAGES):
-    with nav_cols[i]:
-        btn_type = "primary" if st.session_state.page == pg else "secondary"
-        if st.button(pg, key=f"nav_{i}", type=btn_type, use_container_width=True):
-            st.session_state.page = pg
-            st.rerun()
+# Desktop: nav buttons (positioned via CSS into topbar)
+with st.container():
+    nav_cols = st.columns(len(PAGES))
+    for i, pg in enumerate(PAGES):
+        with nav_cols[i]:
+            btn_type = "primary" if st.session_state.page == pg else "secondary"
+            if st.button(pg, key=f"nav_{i}", type=btn_type, use_container_width=True):
+                st.session_state.page = pg
+                st.rerun()
+
+# Mobile: pure HTML/CSS bottom bar with JS
+def _mob_item(idx, icon, label, is_active):
+    cls = 'mob-nav-item active' if is_active else 'mob-nav-item'
+    return (
+        f'<div class="{cls}" onclick="'
+        f"document.querySelectorAll('button').forEach(b => {{"
+        f"  if(b.textContent.includes('{PAGES[idx]}')) b.click();"
+        f"}});"
+        f'">'
+        f'<span class="mob-icon">{icon}</span>'
+        f'<span>{label}</span>'
+        f'</div>'
+    )
+
+bottom_bar_html = (
+    '<div class="mobile-bottombar"><div class="mobile-bottombar-inner">'
+    + ''.join(
+        _mob_item(i, PAGE_ICONS[i], PAGE_SHORT[i], PAGES[i] == st.session_state.page)
+        for i in range(len(PAGES))
+    )
+    + '</div></div>'
+)
+st.markdown(bottom_bar_html, unsafe_allow_html=True)
 
 page = st.session_state.page
 
