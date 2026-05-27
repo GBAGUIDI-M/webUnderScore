@@ -107,21 +107,48 @@ st.markdown(f"""
     /* Push content below fixed topbar */
     .main .block-container {{ padding-top: 5rem !important; }}
 
-    /* ── Mobile responsive topbar ── */
+    /* ── Nav buttons row ── */
+    .main .block-container > div:first-child [data-testid="stHorizontalBlock"]:first-of-type {{
+        position: fixed; top: 12px; right: 2rem; z-index: 10000;
+        gap: 0.3rem !important; flex-wrap: nowrap !important;
+    }}
+    .main .block-container > div:first-child [data-testid="stHorizontalBlock"]:first-of-type button {{
+        background: transparent !important; border: 1px solid transparent !important;
+        color: #8892a4 !important; font-size: 0.82rem !important;
+        padding: 0.4rem 0.8rem !important; font-weight: 600 !important;
+        white-space: nowrap !important; box-shadow: none !important;
+        transition: all 0.25s ease !important;
+    }}
+    .main .block-container > div:first-child [data-testid="stHorizontalBlock"]:first-of-type button:hover {{
+        color: #e8eaf0 !important; background: rgba(59,130,246,0.1) !important;
+    }}
+    .main .block-container > div:first-child [data-testid="stHorizontalBlock"]:first-of-type button[kind="primary"] {{
+        color: #3b82f6 !important; background: rgba(59,130,246,0.15) !important;
+        border-color: rgba(59,130,246,0.2) !important;
+        box-shadow: 0 0 12px rgba(59,130,246,0.1) !important;
+    }}
+
+    /* ── Mobile: bottom nav bar ── */
     @media (max-width: 768px) {{
-        .topnav {{
-            flex-direction: column; height: auto;
-            padding: 0.75rem 1rem; gap: 0.5rem;
+        .topnav {{ display: none; }}
+        .main .block-container > div:first-child [data-testid="stHorizontalBlock"]:first-of-type {{
+            position: fixed !important; top: auto !important;
+            bottom: 0 !important; left: 0 !important; right: 0 !important;
+            z-index: 10000;
+            background: rgba(13,17,23,0.95) !important;
+            backdrop-filter: blur(16px) !important;
+            border-top: 1px solid rgba(59,130,246,0.15);
+            box-shadow: 0 -4px 24px rgba(0,0,0,0.4);
+            padding: 0.4rem 0.25rem !important;
+            gap: 0.1rem !important;
         }}
-        .topnav-links {{
-            width: 100%; overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            gap: 0.15rem; padding-bottom: 0.25rem;
+        .main .block-container > div:first-child [data-testid="stHorizontalBlock"]:first-of-type button {{
+            font-size: 0.62rem !important; padding: 0.5rem 0.2rem !important;
         }}
-        .topnav-links a {{
-            font-size: 0.78rem; padding: 0.4rem 0.7rem;
+        .main .block-container {{
+            padding-top: 1.5rem !important;
+            padding-bottom: 5rem !important;
         }}
-        .main .block-container {{ padding-top: 7.5rem !important; }}
     }}
 
     /* ── Glassmorphism Cards ── */
@@ -216,6 +243,11 @@ st.markdown(f"""
 
     /* ── Table ── */
     .stDataFrame {{ border-radius: 12px; overflow: hidden; }}
+
+    /* ── File uploader fix ── */
+    [data-testid="stFileUploader"] {{ overflow: hidden; }}
+    [data-testid="stFileUploader"] section {{ padding: 0; }}
+    [data-testid="stFileUploader"] button {{ font-size: 0.82rem; }}
 
     /* ── Divider ── */
     .section-divider {{ height: 1px; background: linear-gradient(90deg, transparent, #2a2f45, transparent); margin: 1.5rem 0; }}
@@ -400,29 +432,24 @@ PAGES = ["📊 Dashboard", "⚡ Match Predictor", "🛡 Insurance Pricing", "�
 if "page" not in st.session_state:
     st.session_state.page = PAGES[0]
 
-# Render the HTML top bar
-def _nav_link(label, is_active):
-    cls = ' class="active"' if is_active else ''
-    return f'<a href="?page={label}"{cls}>{label}</a>'
-
-nav_html = (
+# Render logo in the topbar via HTML
+st.markdown(
     '<div class="topnav">'
     '  <div class="topnav-logo"><span class="logo-white">Under</span><span class="logo-blue">Score</span></div>'
-    '  <div class="topnav-links">'
-    + ''.join(_nav_link(p, p == st.session_state.page) for p in PAGES)
-    + '  </div>'
+    '  <div class="topnav-links" id="nav-placeholder"></div>'
     '  <div class="topnav-accent"></div>'
-    '</div>'
+    '</div>',
+    unsafe_allow_html=True,
 )
-st.markdown(nav_html, unsafe_allow_html=True)
 
-# Handle page switching via query params
-qp = st.query_params
-if "page" in qp:
-    requested = qp["page"]
-    if requested in PAGES and requested != st.session_state.page:
-        st.session_state.page = requested
-        st.rerun()
+# Navigation buttons (no page reload)
+nav_cols = st.columns(len(PAGES))
+for i, pg in enumerate(PAGES):
+    with nav_cols[i]:
+        btn_type = "primary" if st.session_state.page == pg else "secondary"
+        if st.button(pg, key=f"nav_{i}", type=btn_type, use_container_width=True):
+            st.session_state.page = pg
+            st.rerun()
 
 page = st.session_state.page
 
