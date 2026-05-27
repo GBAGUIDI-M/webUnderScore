@@ -107,55 +107,55 @@ st.markdown(f"""
     /* Push content below fixed topbar */
     .main .block-container {{ padding-top: 5rem !important; }}
 
-    /* ── Desktop nav links in topbar ── */
-    .topnav-links {{
-        display: flex; align-items: center; gap: 0.25rem;
+    /* ── st.radio as nav: Desktop topbar ── */
+    div[data-testid="stRadio"] {{
+        position: fixed; top: 10px; right: 2rem; z-index: 10000;
     }}
-    .topnav-links a {{
-        color: #8892a4; text-decoration: none;
-        font-size: 0.85rem; font-weight: 600;
-        padding: 0.5rem 1rem; border-radius: 8px;
-        transition: all 0.25s ease; white-space: nowrap;
-        display: flex; align-items: center; gap: 0.4rem;
+    div[data-testid="stRadio"] > div {{
+        flex-direction: row !important; gap: 0.2rem !important;
     }}
-    .topnav-links a:hover {{ color: #e8eaf0; background: rgba(59,130,246,0.1); }}
-    .topnav-links a.active {{
-        color: #3b82f6; background: rgba(59,130,246,0.15);
-        box-shadow: 0 0 12px rgba(59,130,246,0.08);
+    div[data-testid="stRadio"] label {{
+        background: transparent !important;
+        color: #8892a4 !important; font-weight: 600 !important;
+        font-size: 0.84rem !important; padding: 0.45rem 0.9rem !important;
+        border-radius: 8px !important; border: none !important;
+        cursor: pointer !important; transition: all 0.25s ease !important;
+        white-space: nowrap !important;
     }}
-    .topnav-links svg {{ width: 16px; height: 16px; }}
+    div[data-testid="stRadio"] label:hover {{
+        color: #e8eaf0 !important; background: rgba(59,130,246,0.08) !important;
+    }}
+    div[data-testid="stRadio"] label[data-checked="true"],
+    div[data-testid="stRadio"] label:has(input:checked) {{
+        color: #3b82f6 !important; background: rgba(59,130,246,0.12) !important;
+    }}
+    /* Hide radio dot */
+    div[data-testid="stRadio"] input {{ display: none !important; }}
+    div[data-testid="stRadio"] div[role="radiogroup"] > label > div:first-child {{
+        display: none !important;
+    }}
 
-    /* ── Mobile: hide topbar, add bottom padding ── */
-    .mob-bar {{ display: none; }}
+    /* ── Mobile: radio becomes bottom bar ── */
     @media (max-width: 768px) {{
         .topnav {{ display: none !important; }}
-        .mob-bar {{
-            display: block !important;
-            position: fixed; bottom: 0; left: 0; right: 0; z-index: 99999;
-            background: rgba(13,17,23,0.97);
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(59,130,246,0.12);
-            box-shadow: 0 -4px 30px rgba(0,0,0,0.5);
-            padding: 6px 0 max(10px, env(safe-area-inset-bottom)) 0;
+        div[data-testid="stRadio"] {{
+            position: fixed !important; top: auto !important;
+            bottom: 0 !important; left: 0 !important; right: 0 !important;
+            z-index: 99999;
+            background: rgba(13,17,23,0.97) !important;
+            backdrop-filter: blur(20px) !important; -webkit-backdrop-filter: blur(20px) !important;
+            border-top: 1px solid rgba(59,130,246,0.12) !important;
+            box-shadow: 0 -4px 30px rgba(0,0,0,0.5) !important;
+            padding: 6px 4px max(10px, env(safe-area-inset-bottom)) 4px !important;
+            margin: 0 !important;
         }}
-        .mob-bar-inner {{
-            display: flex; justify-content: space-around; align-items: center;
+        div[data-testid="stRadio"] > div {{
+            justify-content: space-around !important;
         }}
-        .mob-item {{
-            display: flex; flex-direction: column; align-items: center;
-            gap: 2px; padding: 6px 8px; border-radius: 10px;
-            color: #6b7280; font-size: 10px; font-weight: 600;
-            text-decoration: none; flex: 1; text-align: center;
-            transition: all 0.2s ease;
-        }}
-        .mob-item:active {{ transform: scale(0.92); }}
-        .mob-item.mob-active {{
-            color: #3b82f6; background: rgba(59,130,246,0.1);
-        }}
-        .mob-item .mob-icon {{ display: block; width: 22px; height: 22px; margin: 0 auto; }}
-        .mob-item .mob-icon svg {{ width: 100%; height: 100%; }}
-        .mob-item.mob-active .mob-icon svg {{
-            filter: drop-shadow(0 0 4px rgba(59,130,246,0.5));
+        div[data-testid="stRadio"] label {{
+            font-size: 0.68rem !important; padding: 0.5rem 0.3rem !important;
+            flex: 1 !important; text-align: center !important;
+            justify-content: center !important;
         }}
         .main .block-container {{
             padding-top: 1rem !important;
@@ -439,54 +439,25 @@ def probability_chart(home_prob, draw_prob, away_prob):
 
 
 # ─── Navigation ───────────────────────────────────────────────
-PAGE_KEYS  = ["dashboard", "predict", "insurance", "batch"]
-PAGE_NAMES = ["Dashboard", "Match Predictor", "Insurance Pricing", "Batch Predict"]
-# SVG paths for clean icons (no emojis)
-PAGE_SVGS = [
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L4 6v6c0 5.5 3.5 10.7 8 12 4.5-1.3 8-6.5 8-12V6z"/></svg>',
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
-]
+PAGE_OPTIONS = ["Dashboard", "Match Predictor", "Insurance Pricing", "Batch Predict"]
 
-# Read current page from query params
-qp = st.query_params
-current_key = qp.get("p", "dashboard")
-if current_key not in PAGE_KEYS:
-    current_key = "dashboard"
-current_idx = PAGE_KEYS.index(current_key)
-
-# ─── Desktop: topbar with logo + nav links ───
-def _desktop_link(idx):
-    active = ' active' if idx == current_idx else ''
-    return (f'<a href="?p={PAGE_KEYS[idx]}" class="{active}" '
-            f'target="_self">{PAGE_SVGS[idx]} {PAGE_NAMES[idx]}</a>')
-
+# Logo topbar (desktop only, hidden on mobile via CSS)
 st.markdown(
     '<div class="topnav">'
     '  <div class="topnav-logo"><span class="logo-white">Under</span><span class="logo-blue">Score</span></div>'
-    '  <div class="topnav-links">' + ''.join(_desktop_link(i) for i in range(len(PAGE_KEYS))) + '</div>'
     '  <div class="topnav-accent"></div>'
     '</div>',
     unsafe_allow_html=True,
 )
 
-# ─── Mobile: bottom bar via st.markdown + <a> links ───
-def _mob_item_html(idx):
-    active = ' mob-active' if idx == current_idx else ''
-    return (f'<a href="?p={PAGE_KEYS[idx]}" class="mob-item{active}">'
-            f'<span class="mob-icon">{PAGE_SVGS[idx]}</span>'
-            f'<span class="mob-label">{PAGE_NAMES[idx].split()[0]}</span></a>')
-
-st.markdown(
-    '<div class="mob-bar"><div class="mob-bar-inner">'
-    + ''.join(_mob_item_html(i) for i in range(len(PAGE_KEYS)))
-    + '</div></div>',
-    unsafe_allow_html=True,
+# Single radio for all navigation — styled differently on desktop vs mobile
+page = st.radio(
+    "nav",
+    PAGE_OPTIONS,
+    horizontal=True,
+    label_visibility="collapsed",
+    key="main_nav",
 )
-
-# Map to page display name
-page = PAGE_NAMES[current_idx]
 
 
 # ═══════════════════════════════════════════════════════════════
