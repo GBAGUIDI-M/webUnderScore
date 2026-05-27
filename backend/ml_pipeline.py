@@ -8,6 +8,7 @@ import xgboost as xgb
 import shap
 import matplotlib.pyplot as plt
 import json
+import gdown
 from scipy.stats import poisson
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import log_loss, accuracy_score, classification_report
@@ -17,12 +18,130 @@ from sklearn.utils.class_weight import compute_sample_weight
 warnings.filterwarnings('ignore')
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-BASE_DIR = os.path.dirname(__file__)
+try:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+except NameError:
+    # Fallback for interactive sessions (Jupyter, python -c, etc.)
+    BASE_DIR = os.path.abspath(os.getcwd())
 MODEL_DIR = os.path.join(BASE_DIR, 'models')
 os.makedirs(MODEL_DIR, exist_ok=True)
 
 # Point to data dir in backend/data
 DATA_DIR = os.path.join(BASE_DIR, "data")
+
+# =====================================================================
+# DATA DOWNLOAD  (Google Drive folder → Dropbox zip → Google Drive per-file)
+# =====================================================================
+
+# Shared Google Drive folder URL (publicly accessible via link)
+DRIVE_FOLDER_URL = "https://drive.google.com/drive/folders/1r6tz8ySbS6_sB-OFiN-C1-iPuv6icKfc?usp=sharing"
+
+# ---- Per-file IDs (resolved from the shared folder above) ----
+# Used as fallback if download_folder fails.
+# Refresh IDs: python -c "import gdown; gdown.download_folder(id='1r6tz8ySbS6_sB-OFiN-C1-iPuv6icKfc', skip_download=True)"
+DRIVE_FILE_IDS = {
+    "PSL_xG_Database_2425.csv":     "1WD-1EqrT-JG9zTwyNTAKa4BI3BF909pW",
+    "PSL_xG_Database_2526.csv":     "1302MIif0X0SbCl2EJzN8fsU_l1davr98",
+    "PSL_MatchStats_2425.csv":      "13h_gfu7NluMHVFvAhxpbehbC9sHC2roJ",
+    "PSL_MatchStats_2526.csv":      "168oQhLNZcxxytcqzVBCDjIxR8CZd7PNR",
+    "PSL_Events_Database_2425.csv": "1_r896pPucCReSAoCuoU2HqcwM87Y5ff1",
+    "PSL_Events_Database_2526.csv": "18Hy2zGL2xVFOdegInBVyc4M1wxb3XY3F",
+}
+
+
+
+def download_data_from_drive(force: bool = False):
+    """
+    Télécharge tous les CSV dans DATA_DIR via une stratégie à 3 niveaux :
+      1. Google Drive  — dossier complet (gdown.download_folder)
+      2. Dropbox       — dossier téléchargé en zip puis extrait
+      3. Google Drive  — fichier par fichier (IDs individuels)
+    force=True force le re-téléchargement même si les fichiers sont présents.
+    """
+    import urllib.request
+    import zipfile
+    import tempfile
+
+    DROPBOX_ZIP_URL = (
+        "https://www.dropbox.com/scl/fo/0t9ft4lckfe3th6ihpz0i/"
+        "AP6cD8QVvwdrZR5sG9pF2cg"
+        "?rlkey=ngia4vedhpm5y5ckidl3vwrqe&dl=1"
+    )
+
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+    def _all_present():
+        return all(os.path.exists(os.path.join(DATA_DIR, f)) for f in DRIVE_FILE_IDS)
+
+    if _all_present() and not force:
+        print("[Data] Tous les fichiers sont déjà présents, téléchargement ignoré.")
+        return
+
+    # ------------------------------------------------------------------
+    # 1. Google Drive — dossier complet
+    # ------------------------------------------------------------------
+    print("[Drive] Tentative téléchargement dossier Google Drive...")
+    try:
+        gdown.download_folder(
+            url=DRIVE_FOLDER_URL,
+            output=DATA_DIR,
+            quiet=False,
+            use_cookies=False,
+            remaining_ok=True,
+        )
+        if _all_present():
+            print("[Drive] ✓ Téléchargement Google Drive terminé.")
+            return
+        print("[Drive] Fichiers manquants après download_folder, passage au plan B.")
+    except Exception as e:
+        print(f"[Drive] download_folder a échoué : {e}")
+
+    # ------------------------------------------------------------------
+    # 2. Dropbox — dossier entier zippé → extraction des CSV
+    # ------------------------------------------------------------------
+    print("[Dropbox] Tentative téléchargement dossier Dropbox (zip)...")
+    try:
+        tmp_zip = tempfile.mktemp(suffix=".zip")
+        req = urllib.request.Request(DROPBOX_ZIP_URL, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=180) as resp, open(tmp_zip, "wb") as out:
+            out.write(resp.read())
+        print("[Dropbox] Archive reçue, extraction en cours...")
+        with zipfile.ZipFile(tmp_zip, "r") as z:
+            for member in z.namelist():
+                fname = os.path.basename(member)
+                if fname in DRIVE_FILE_IDS:
+                    dest = os.path.join(DATA_DIR, fname)
+                    with z.open(member) as src, open(dest, "wb") as dst:
+                        dst.write(src.read())
+                    print(f"[Dropbox]   ✓ {fname}")
+        os.remove(tmp_zip)
+        if _all_present():
+            print("[Dropbox] ✓ Tous les fichiers extraits avec succès.")
+            return
+        print("[Dropbox] Extraction partielle, passage au plan C.")
+    except Exception as e:
+        print(f"[Dropbox] Échec : {e}")
+
+    # ------------------------------------------------------------------
+    # 3. Google Drive — fichier par fichier (fallback final)
+    # ------------------------------------------------------------------
+    print("[Drive] Téléchargement fichier par fichier (fallback final)...")
+    for filename, file_id in DRIVE_FILE_IDS.items():
+        dest = os.path.join(DATA_DIR, filename)
+        if not os.path.exists(dest) or force:
+            print(f"[Drive] Téléchargement de {filename}...")
+            try:
+                gdown.download(
+                    f"https://drive.google.com/uc?id={file_id}",
+                    dest,
+                    quiet=False,
+                )
+                print(f"[Drive]   ✓ {filename}")
+            except Exception as e:
+                print(f"[Drive]   ✗ Échec pour {filename} : {e}")
+        else:
+            print(f"[Drive]   — {filename} déjà présent, ignoré.")
+
 
 # =====================================================================
 # DATA LOADING & CONSOLIDATION
@@ -192,6 +311,9 @@ def add_poisson_probabilities(df_matches):
 # =====================================================================
 
 def trigger_training():
+    # Téléchargement automatique depuis Google Drive (ignoré si déjà présent)
+    download_data_from_drive()
+
     xg_df = load_and_combine_seasons("PSL_xG_Database")
     stats_df = load_and_combine_seasons("PSL_MatchStats")
     events_df = load_and_combine_seasons("PSL_Events_Database")

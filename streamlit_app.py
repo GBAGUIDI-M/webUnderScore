@@ -1,0 +1,685 @@
+"""
+UnderScore — Sports Analytics | Streamlit App
+Déploiement du modèle XGBoost de prédiction de matchs PSL.
+"""
+import os
+import pickle
+import json
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import streamlit as st
+from scipy.stats import poisson
+
+# ─── Configuration ────────────────────────────────────────────
+st.set_page_config(
+    page_title="UnderScore — Sports Analytics",
+    page_icon="⚽",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# ─── Paths ────────────────────────────────────────────────────
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_DIR = os.path.join(BASE_DIR, "models_pkl")
+
+# ─── Custom CSS ───────────────────────────────────────────────
+st.markdown("""
+<style>
+    /* Import modern font */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    html, body, [class*="st-"] {
+        font-family: 'Inter', sans-serif;
+    }
+
+    /* Header styling */
+    .main-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        letter-spacing: -1px;
+        margin-bottom: 0;
+    }
+    .logo-white { color: #ffffff; }
+    .logo-blue  { color: #3b82f6; }
+    .logo-bar {
+        height: 3px;
+        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+        border-radius: 2px;
+        margin-top: 6px;
+        margin-bottom: 1.5rem;
+        width: 120px;
+    }
+
+    /* Cards */
+    .metric-card {
+        background: #1a1d27;
+        border: 1px solid #2a2f45;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .metric-card-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #8892a4;
+        margin-bottom: 0.5rem;
+    }
+    .metric-card-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #ffffff;
+    }
+    .metric-card-value.green { color: #10b981; }
+    .metric-card-sub {
+        font-size: 0.8rem;
+        color: #8892a4;
+        margin-top: 0.35rem;
+    }
+
+    /* Result display */
+    .result-box {
+        background: linear-gradient(135deg, #1e3a5f, #1a2d4a);
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        margin: 1rem 0;
+    }
+    .result-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: #93c5fd;
+        margin-bottom: 0.3rem;
+    }
+    .result-value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #ffffff;
+    }
+
+    /* Insurance premium */
+    .premium-box {
+        background: linear-gradient(135deg, #1e3a5f, #1a2d4a);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .premium-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #93c5fd;
+        margin-bottom: 0.5rem;
+    }
+    .premium-value {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: #ffffff;
+    }
+    .premium-sub {
+        font-size: 0.8rem;
+        color: #93c5fd;
+        margin-top: 0.2rem;
+    }
+
+    /* Interpretation box */
+    .interpretation-box {
+        background: rgba(59,130,246,0.05);
+        border: 1px dashed #3b82f6;
+        padding: 1.25rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+    }
+    .interpretation-title {
+        font-size: 0.85rem;
+        margin-bottom: 0.75rem;
+        color: #3b82f6;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .interpretation-text {
+        font-size: 0.88rem;
+        color: #8892a4;
+        line-height: 1.6;
+    }
+
+    /* Badge */
+    .badge-red {
+        background: rgba(239,68,68,0.15);
+        color: #f87171;
+        border: 1px solid rgba(239,68,68,0.3);
+        padding: 0.25rem 0.75rem;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        display: inline-block;
+    }
+
+    /* Profit row */
+    .profit-row {
+        background: rgba(16,185,129,0.08);
+        padding: 0.75rem;
+        border-radius: 8px;
+        border: 1px solid rgba(16,185,129,0.2);
+    }
+    .profit-value {
+        color: #10b981;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+
+    /* Hide Streamlit branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+
+    /* Sidebar styling */
+    [data-testid="stSidebar"] {
+        background: #1a1d27;
+        border-right: 1px solid #2a2f45;
+    }
+    [data-testid="stSidebar"] .stRadio > label {
+        color: #8892a4;
+    }
+
+    /* Table styling */
+    .stDataFrame {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    /* Divider */
+    .section-divider {
+        height: 1px;
+        background: #2a2f45;
+        margin: 1.5rem 0;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+
+# ─── Model Loading (cached) ──────────────────────────────────
+@st.cache_resource
+def load_model():
+    with open(os.path.join(MODEL_DIR, "calibrated_model.pkl"), "rb") as f:
+        model = pickle.load(f)
+    return model
+
+@st.cache_data
+def load_features():
+    with open(os.path.join(MODEL_DIR, "features_list.pkl"), "rb") as f:
+        return pickle.load(f)
+
+@st.cache_data
+def load_elo():
+    with open(os.path.join(MODEL_DIR, "latest_elo.pkl"), "rb") as f:
+        return pickle.load(f)
+
+@st.cache_data
+def load_rolling_stats():
+    with open(os.path.join(MODEL_DIR, "latest_rolling_stats.pkl"), "rb") as f:
+        return pickle.load(f)
+
+@st.cache_data
+def load_teams():
+    with open(os.path.join(MODEL_DIR, "teams.pkl"), "rb") as f:
+        return sorted(pickle.load(f))
+
+@st.cache_data
+def load_shap():
+    path = os.path.join(MODEL_DIR, "shap_data.json")
+    if os.path.exists(path):
+        with open(path, "r") as f:
+            return json.load(f)
+    return {}
+
+
+# ─── Prediction Logic ────────────────────────────────────────
+def predict_match(home_team: str, away_team: str) -> dict:
+    """Reproduce ml_pipeline.predict_single_match with .pkl files."""
+    model = load_model()
+    features_list = load_features()
+    elo_dict = load_elo()
+    rolling_stats = load_rolling_stats()
+
+    home_elo = elo_dict.get(home_team, 1500)
+    away_elo = elo_dict.get(away_team, 1500)
+
+    h_stats = rolling_stats.get(home_team, {})
+    a_stats = rolling_stats.get(away_team, {})
+
+    row = {}
+    row["Home_Elo"] = home_elo
+    row["Away_Elo"] = away_elo
+    row["Elo_Difference"] = home_elo - away_elo
+
+    for k, v in h_stats.items():
+        row[f"Home_{k}"] = v
+    for k, v in a_stats.items():
+        row[f"Away_{k}"] = v
+
+    # Poisson probabilities
+    h_proj = (row.get("Home_Roll_xG_For", 1) + row.get("Away_Roll_xG_Against", 1)) / 2
+    a_proj = (row.get("Away_Roll_xG_For", 1) + row.get("Home_Roll_xG_Against", 1)) / 2
+
+    def poisson_probs(h_lambda, a_lambda):
+        h_probs = [poisson.pmf(i, max(0.1, h_lambda)) for i in range(7)]
+        a_probs = [poisson.pmf(i, max(0.1, a_lambda)) for i in range(7)]
+        matrix = np.outer(h_probs, a_probs)
+        return np.sum(np.tril(matrix, -1)), np.sum(np.diag(matrix)), np.sum(np.triu(matrix, 1))
+
+    h_win, draw, a_win = poisson_probs(h_proj, a_proj)
+    row["Poisson_HomeWin"] = h_win
+    row["Poisson_Draw"] = draw
+    row["Poisson_AwayWin"] = a_win
+
+    input_vector = [row.get(f, 0) for f in features_list]
+    X_pred = pd.DataFrame([input_vector], columns=features_list)
+    probs = model.predict_proba(X_pred)[0]
+
+    classes = ["Away Win", "Draw", "Home Win"]
+    pred_idx = int(np.argmax(probs))
+
+    return {
+        "home_win_prob": round(probs[2] * 100, 2),
+        "draw_prob": round(probs[1] * 100, 2),
+        "away_win_prob": round(probs[0] * 100, 2),
+        "prediction": classes[pred_idx],
+    }
+
+
+def fmt(n):
+    """Format as South African Rand."""
+    return f"R {round(n):,}".replace(",", " ")
+
+
+# ─── Plotly chart helper ──────────────────────────────────────
+def probability_chart(home_prob, draw_prob, away_prob):
+    colors = ["#3b82f6", "#8b5cf6", "#ef4444"]
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                x=["Home Win", "Draw", "Away Win"],
+                y=[home_prob, draw_prob, away_prob],
+                marker_color=colors,
+                marker_line_width=0,
+                text=[f"{v}%" for v in [home_prob, draw_prob, away_prob]],
+                textposition="outside",
+                textfont=dict(color="#e8eaf0", size=14, family="Inter"),
+            )
+        ]
+    )
+    fig.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#8892a4", family="Inter"),
+        xaxis=dict(showgrid=False, tickfont=dict(size=13)),
+        yaxis=dict(visible=False, range=[0, max(home_prob, draw_prob, away_prob) * 1.25]),
+        margin=dict(l=10, r=10, t=20, b=40),
+        height=280,
+        showlegend=False,
+        bargap=0.35,
+    )
+    return fig
+
+
+# ─── Sidebar ─────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown(
+        '<div class="main-title"><span class="logo-white">Under</span>'
+        '<span class="logo-blue">Score</span></div>'
+        '<div class="logo-bar"></div>',
+        unsafe_allow_html=True,
+    )
+
+    page = st.radio(
+        "Navigation",
+        ["📊 Dashboard", "⚡ Match Predictor", "🛡 Insurance Pricing", "📁 Batch Predict"],
+        label_visibility="collapsed",
+    )
+
+    st.markdown("---")
+    st.caption("PSL · AI Engine")
+
+
+# ═══════════════════════════════════════════════════════════════
+# PAGE 1: DASHBOARD
+# ═══════════════════════════════════════════════════════════════
+if page == "📊 Dashboard":
+    st.markdown("## Overview")
+    st.markdown('<p style="color:#8892a4; margin-top:-0.5rem;">Status of the AI prediction engine.</p>', unsafe_allow_html=True)
+
+    # Status cards
+    col1, col2, col3 = st.columns(3)
+
+    model_exists = os.path.exists(os.path.join(MODEL_DIR, "calibrated_model.pkl"))
+
+    with col1:
+        st.markdown(
+            '<div class="metric-card">'
+            '<div class="metric-card-label">Pipeline Status</div>'
+            f'<div class="metric-card-value green">{"● Active" if model_exists else "● Inactive"}</div>'
+            f'<div class="metric-card-sub">{"Ready for predictions" if model_exists else "Model not found"}</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+    with col2:
+        st.markdown(
+            '<div class="metric-card">'
+            '<div class="metric-card-label">Model</div>'
+            '<div class="metric-card-value">XGBoost</div>'
+            '<div class="metric-card-sub">Calibrated + SHAP</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+    with col3:
+        teams = load_teams() if model_exists else []
+        st.markdown(
+            '<div class="metric-card">'
+            '<div class="metric-card-label">Teams</div>'
+            f'<div class="metric-card-value">{len(teams)}</div>'
+            '<div class="metric-card-sub">PSL 2024/25 & 2025/26</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+
+    # ELO Rankings & SHAP side by side
+    col_elo, col_shap = st.columns([3, 2])
+
+    with col_elo:
+        st.markdown("### 🏆 ELO Rankings")
+        if model_exists:
+            elo = load_elo()
+            elo_sorted = sorted(elo.items(), key=lambda x: -x[1])
+            elo_df = pd.DataFrame(elo_sorted, columns=["Team", "ELO Rating"])
+            elo_df.index = range(1, len(elo_df) + 1)
+            elo_df.index.name = "Rank"
+            elo_df["ELO Rating"] = elo_df["ELO Rating"].round(1)
+            st.dataframe(elo_df, use_container_width=True, height=500)
+        else:
+            st.warning("Model not trained yet.")
+
+    with col_shap:
+        st.markdown("### 🔍 Feature Importance (SHAP)")
+        shap_data = load_shap()
+        if shap_data:
+            features = list(shap_data.keys())
+            values = list(shap_data.values())
+            fig = go.Figure(
+                go.Bar(
+                    x=values,
+                    y=features,
+                    orientation="h",
+                    marker_color="#3b82f6",
+                    marker_line_width=0,
+                )
+            )
+            fig.update_layout(
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#8892a4", family="Inter"),
+                xaxis=dict(showgrid=False, title="Mean |SHAP value|"),
+                yaxis=dict(autorange="reversed"),
+                margin=dict(l=10, r=10, t=10, b=40),
+                height=250,
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No SHAP data available.")
+
+
+# ═══════════════════════════════════════════════════════════════
+# PAGE 2: MATCH PREDICTOR
+# ═══════════════════════════════════════════════════════════════
+elif page == "⚡ Match Predictor":
+    st.markdown("## ⚡ Match Predictor")
+    st.markdown(
+        '<p style="color:#8892a4; margin-top:-0.5rem;">Select two teams to get AI-driven win probabilities.</p>',
+        unsafe_allow_html=True,
+    )
+
+    teams = load_teams()
+
+    col_form, col_result = st.columns(2)
+
+    with col_form:
+        home_team = st.selectbox("Home Team", [""] + teams, index=0, key="pred_home")
+        away_team = st.selectbox("Away Team", [""] + teams, index=0, key="pred_away")
+        predict_btn = st.button("Generate Prediction", type="primary", use_container_width=True)
+
+    with col_result:
+        if predict_btn:
+            if not home_team or not away_team:
+                st.error("Please select both teams.")
+            elif home_team == away_team:
+                st.error("Home and Away teams must be different.")
+            else:
+                with st.spinner("Calculating probabilities..."):
+                    try:
+                        result = predict_match(home_team, away_team)
+
+                        st.markdown(
+                            '<div class="result-box">'
+                            '<div class="result-label">Most Likely Outcome</div>'
+                            f'<div class="result-value">{result["prediction"]}</div>'
+                            '</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                        fig = probability_chart(
+                            result["home_win_prob"],
+                            result["draw_prob"],
+                            result["away_win_prob"],
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+
+                        # Details
+                        m1, m2, m3 = st.columns(3)
+                        m1.metric("Home Win", f'{result["home_win_prob"]}%')
+                        m2.metric("Draw", f'{result["draw_prob"]}%')
+                        m3.metric("Away Win", f'{result["away_win_prob"]}%')
+                    except Exception as e:
+                        st.error(f"Prediction failed: {e}")
+        else:
+            st.markdown(
+                '<div style="text-align:center; padding:3rem; color:#8892a4;">'
+                '<div style="font-size:2.5rem; opacity:0.4; margin-bottom:0.75rem;">⚡</div>'
+                '<p>Run a prediction to see probabilities.</p>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+
+# ═══════════════════════════════════════════════════════════════
+# PAGE 3: INSURANCE PRICING
+# ═══════════════════════════════════════════════════════════════
+elif page == "🛡 Insurance Pricing":
+    st.markdown("## 🛡 Prize Indemnity Underwriting")
+    st.markdown(
+        '<p style="color:#8892a4; margin-top:-0.5rem;">Turn match probabilities into actuarially priced insurance products.</p>',
+        unsafe_allow_html=True,
+    )
+
+    teams = load_teams()
+
+    col_params, col_result = st.columns([2, 3])
+
+    with col_params:
+        st.markdown("#### Scenario Parameters")
+        prize = st.number_input("Corporate Prize Amount (R)", min_value=1000, value=5000000, step=100000)
+        ins_home = st.selectbox("Home Team", [""] + teams, index=0, key="ins_home")
+        ins_away = st.selectbox("Away Team", [""] + teams, index=0, key="ins_away")
+        condition = st.selectbox(
+            "Payout Condition",
+            ["home", "draw", "away"],
+            format_func=lambda x: {"home": "Fan predicts Home Win", "draw": "Fan predicts Draw", "away": "Fan predicts Away Win"}[x],
+        )
+        margin = st.number_input("Insurer Profit Margin (%)", min_value=0, max_value=1000, value=30)
+        calc_btn = st.button("Calculate Premium", type="primary", use_container_width=True)
+
+    with col_result:
+        if calc_btn:
+            if not ins_home or not ins_away:
+                st.error("Please select both teams.")
+            elif ins_home == ins_away:
+                st.error("Home and Away teams must be different.")
+            else:
+                with st.spinner("Calculating premium..."):
+                    try:
+                        result = predict_match(ins_home, ins_away)
+                        prob = (
+                            result["home_win_prob"] if condition == "home"
+                            else result["draw_prob"] if condition == "draw"
+                            else result["away_win_prob"]
+                        )
+                        prob_dec = prob / 100
+                        expected_loss = prob_dec * prize
+                        premium = expected_loss * (1 + margin / 100)
+                        profit = premium - expected_loss
+
+                        # Premium header
+                        st.markdown(
+                            '<div class="premium-box">'
+                            '<div class="premium-label">Underwriting Recommendation</div>'
+                            f'<div class="premium-value">{fmt(premium)}</div>'
+                            '<div class="premium-sub">Upfront Premium Required</div>'
+                            '</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                        # Detail rows
+                        r1, r2 = st.columns(2)
+                        r1.markdown(f"**Event Probability**")
+                        r2.markdown(f'<span class="badge-red">{prob:.2f}%</span>', unsafe_allow_html=True)
+
+                        r1, r2 = st.columns(2)
+                        r1.markdown("**Total Liability (Prize)**")
+                        r2.markdown(f"{fmt(prize)}")
+
+                        r1, r2 = st.columns(2)
+                        r1.markdown("**Expected Loss (Base Cost)**")
+                        r2.markdown(f"**{fmt(expected_loss)}**")
+
+                        r1, r2 = st.columns(2)
+                        r1.markdown("**Profit Margin**")
+                        r2.markdown(f"{margin}%")
+
+                        st.markdown(
+                            f'<div class="profit-row" style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">'
+                            f'<span><strong>Projected Long-Term Profit</strong></span>'
+                            f'<span class="profit-value">+{fmt(profit)}</span>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                        # Interpretation
+                        condition_label = {"home": "Home Win", "draw": "Draw", "away": "Away Win"}[condition]
+                        st.markdown(
+                            f'<div class="interpretation-box">'
+                            f'<div class="interpretation-title">Underwriter\'s Interpretation</div>'
+                            f'<div class="interpretation-text">'
+                            f'The XGBoost algorithm determined a <strong style="color:#e8eaf0">{prob:.2f}%</strong> probability for {condition_label}. '
+                            f'To cover a risk of <strong style="color:#e8eaf0">{fmt(prize)}</strong>, the actuarial "pure" cost is '
+                            f'<strong style="color:#e8eaf0">{fmt(expected_loss)}</strong>. '
+                            f'By applying a <strong style="color:#e8eaf0">{margin}%</strong> margin, the premium of '
+                            f'<strong style="color:#e8eaf0">{fmt(premium)}</strong> generates a statistical profit of '
+                            f'<strong style="color:#e8eaf0">+{fmt(profit)}</strong>. '
+                            f'This pricing secures the financial risk by relying on objective historical data rather than sporting intuition.'
+                            f'</div></div>',
+                            unsafe_allow_html=True,
+                        )
+                    except Exception as e:
+                        st.error(f"Calculation failed: {e}")
+        else:
+            st.markdown(
+                '<div style="text-align:center; padding:3rem; color:#8892a4;">'
+                '<div style="font-size:2.5rem; opacity:0.4; margin-bottom:0.75rem;">🛡</div>'
+                '<p>Configure scenario and calculate premium.</p>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+
+# ═══════════════════════════════════════════════════════════════
+# PAGE 4: BATCH PREDICT
+# ═══════════════════════════════════════════════════════════════
+elif page == "📁 Batch Predict":
+    st.markdown("## 📁 Batch Predictor")
+    st.markdown(
+        '<p style="color:#8892a4; margin-top:-0.5rem;">Upload a CSV with <code>HomeTeam</code> and <code>AwayTeam</code> columns.</p>',
+        unsafe_allow_html=True,
+    )
+
+    uploaded_file = st.file_uploader("Upload CSV", type=["csv"], label_visibility="collapsed")
+
+    if uploaded_file is not None:
+        df = pd.read_csv(uploaded_file)
+
+        if "HomeTeam" not in df.columns or "AwayTeam" not in df.columns:
+            st.error("CSV must contain **HomeTeam** and **AwayTeam** columns.")
+        else:
+            with st.spinner(f"Predicting {len(df)} matches..."):
+                results = []
+                progress = st.progress(0)
+                for i, (_, row) in enumerate(df.iterrows()):
+                    try:
+                        pred = predict_match(row["HomeTeam"], row["AwayTeam"])
+                        results.append({
+                            "Home Team": row["HomeTeam"],
+                            "Away Team": row["AwayTeam"],
+                            "Home Win %": pred["home_win_prob"],
+                            "Draw %": pred["draw_prob"],
+                            "Away Win %": pred["away_win_prob"],
+                            "Prediction": pred["prediction"],
+                        })
+                    except Exception:
+                        results.append({
+                            "Home Team": row["HomeTeam"],
+                            "Away Team": row["AwayTeam"],
+                            "Home Win %": "—",
+                            "Draw %": "—",
+                            "Away Win %": "—",
+                            "Prediction": "❌ Error",
+                        })
+                    progress.progress((i + 1) / len(df))
+
+                progress.empty()
+                res_df = pd.DataFrame(results)
+
+                st.markdown(f"### Results — {len(res_df)} matches")
+                st.dataframe(
+                    res_df,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "Home Win %": st.column_config.NumberColumn(format="%.2f%%"),
+                        "Draw %": st.column_config.NumberColumn(format="%.2f%%"),
+                        "Away Win %": st.column_config.NumberColumn(format="%.2f%%"),
+                    },
+                )
+
+                # Download button
+                csv = res_df.to_csv(index=False)
+                st.download_button(
+                    label="📥 Download Results as CSV",
+                    data=csv,
+                    file_name="underscore_predictions.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                )
+    else:
+        st.markdown(
+            '<div style="text-align:center; padding:3rem; color:#8892a4; border:2px dashed #2a2f45; border-radius:12px;">'
+            '<div style="font-size:2.5rem; opacity:0.4; margin-bottom:0.75rem;">📂</div>'
+            '<p>Drag and drop or click to select CSV</p>'
+            '</div>',
+            unsafe_allow_html=True,
+        )

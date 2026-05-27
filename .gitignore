@@ -1,5 +1,21 @@
+# Virtual environment
 .venv/
 __pycache__/
+
+# Datasets (heavy CSV files — downloaded at runtime)
+backend/data/
 *.csv
+
+# Original model artifacts (joblib)
 *.joblib
+backend/models/
+
+# Cloudflared binary
+backend/cloudflared
+
+# Logs
 *.log
+
+# OS
+.DS_Store
+Thumbs.db

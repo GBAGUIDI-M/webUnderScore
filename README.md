@@ -1,44 +1,32 @@
-# Predictor Pro
+# UnderScore - Football Predictor
 
-A complete football prediction platform using a custom XGBoost AI pipeline.
+A streamlined football prediction platform using a custom XGBoost AI pipeline and a lightweight HTML/CSS/JS frontend.
 
-## Features
-- **FastAPI Backend**: Reusable endpoints for triggering model training, fetching single match predictions (with Poisson probability calculations), extracting model insights via SHAP, and processing batch CSV predictions.
-- **Next.js Frontend**: Clean, blue-themed SaaS dashboard. Features interactive forms, dynamic `recharts` graphs for both individual match breakdowns and global model importance.
+## 🚀 Features
+- **FastAPI Backend**: Robust API for training, individual predictions, SHAP insights, and batch processing.
+- **Lightweight Frontend**: Fast and clean HTML/CSS/JS dashboard (SPA) served via Python's HTTP server.
+- **CSV Data Source**: Uses local CSV datasets for training and inference (PSL 2024/25 & 2025/26).
 
-## Running the Application
+## 🛠 Running the Application
 
-### Option 1: Docker Compose (Recommended)
-You can launch both the frontend and backend simultaneously using Docker Compose:
+Simply use the provided start script:
 ```bash
-docker compose up -d --build
+./start.sh
 ```
-This will mount the data CSV volumes locally into the container and start:
-- Frontend on `http://localhost:3000`
-- Backend API on `http://localhost:8000`
+This will launch:
+- **Frontend**: [http://localhost:3000](http://localhost:3000)
+- **Backend API**: [http://localhost:8000](http://localhost:8000)
 
-### Option 2: Local Development
-**1. Start Backend**
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload --host 127.0.0.1 --port 8000
-```
-**2. Start Frontend**
-```bash
-cd frontend
-npm install
-npm run dev
-```
+## 📁 Project Structure
+- `app/`: Frontend files (HTML, CSS, JS).
+- `backend/`: FastAPI application and ML pipeline.
+- `backend/data/`: Local CSV datasets.
+- `backend/models/`: Cached ML models and statistics.
 
-The app will be available at `http://localhost:3000`.
-
-## Endpoints overview
-- `POST /predict`: Submit HomeTeam & AwayTeam to retrieve prediction probabilities.
-- `POST /train`: Retrain the pipeline utilizing Data aggregation + Optuna hyperparameters optimization. Will automatically save all pipeline models locally.
-- `GET /explain`: Extract the top 15 most important features according to SHAP.
-- `POST /batch`: Batch run predictions on a CSV file.
+## 📡 Endpoints overview
+- `POST /predict`: Individual match predictions.
+- `POST /train`: Retrain the XGBoost model with Optuna optimization.
+- `GET /explain`: SHAP feature importance data.
+- `POST /batch`: Batch prediction from CSV.
 
 Enjoy the platform!

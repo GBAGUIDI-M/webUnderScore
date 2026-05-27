@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UnderScore — Sports Analytics</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div class="logo"><span class="logo-white">Under</span><span class="logo-blue">Score</span>
+      <div class="logo-bar"></div>
+    </div>
+    <nav>
+      <a href="#" class="nav-link active" data-page="dashboard">
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
+        </svg>
+        Dashboard
+      </a>
+      <a href="#" class="nav-link" data-page="predict">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" />
+          <path d="M12 6v6l4 2" />
+        </svg>
+        Match Predictor
+      </a>
+      <a href="#" class="nav-link" data-page="insurance">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L4 6v6c0 5.5 3.5 10.7 8 12 4.5-1.3 8-6.5 8-12V6z" />
+        </svg>
+        Insurance Pricing
+      </a>
+      <a href="#" class="nav-link" data-page="batch">
+        <svg viewBox="0 0 24 24">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+        </svg>
+        Batch Predict
+      </a>
+    </nav>
+    <div class="sidebar-footer">PSL · AI Engine</div>
+  </aside>
+
+  <!-- Mobile topbar -->
+  <div id="topbar">
+    <div class="logo-mobile">
+      <span class="logo-white">Under</span><span class="logo-blue">Score</span>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <main id="main">
+
+    <!-- DASHBOARD -->
+    <section id="page-dashboard" class="page active">
+      <div class="page-header">
+        <h1>Overview</h1>
+        <p>Status of the AI prediction engine.</p>
+      </div>
+      <div class="cards-grid">
+        <div class="card">
+          <div class="card-label">Pipeline Status</div>
+          <div class="card-value green">● Active</div>
+          <div class="card-sub">Ready for predictions</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Model</div>
+          <div class="card-value">XGBoost</div>
+          <div class="card-sub">Calibrated + SHAP</div>
+        </div>
+      </div>
+      <div class="card card-wide">
+        <div class="card-label">Model Actions</div>
+        <div style="margin-top:1rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+          <button class="btn btn-primary" id="train-btn" onclick="trainModel()">
+            <span id="train-icon">▶</span> Retrain XGBoost Model
+          </button>
+          <span id="train-status"></span>
+        </div>
+        <p class="card-sub" style="margin-top:1rem;">Triggers the full ML pipeline: xG aggregation, Elo ratings, Optuna
+          tuning, probability calibration and SHAP analysis.</p>
+      </div>
+    </section>
+
+    <!-- MATCH PREDICTOR -->
+    <section id="page-predict" class="page">
+      <div class="page-header">
+        <h1>⚡ Match Predictor</h1>
+        <p>Select two teams to get AI-driven win probabilities.</p>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <div class="form-group">
+            <label>Home Team</label>
+            <select id="home-team">
+              <option value="" disabled selected>Select Home Team</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Away Team</label>
+            <select id="away-team">
+              <option value="" disabled selected>Select Away Team</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="predict()">Generate Prediction</button>
+          <div id="predict-error" class="error-box" style="display:none"></div>
+        </div>
+        <div class="card center-content" id="predict-result-box">
+          <div id="predict-placeholder" class="placeholder">
+            <div class="placeholder-icon">⚡</div>
+            <p>Run a prediction to see probabilities.</p>
+          </div>
+          <div id="predict-result" style="display:none;width:100%">
+            <div class="result-label">Most Likely Outcome</div>
+            <div class="result-value" id="result-prediction"></div>
+            <canvas id="predict-chart" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INSURANCE -->
+    <section id="page-insurance" class="page">
+      <div class="page-header">
+        <h1>🛡 Prize Indemnity Underwriting</h1>
+        <p>Turn match probabilities into actuarially priced insurance products.</p>
+      </div>
+      <div class="two-col-wide">
+        <div class="card" style="flex:0 0 340px">
+          <h3 class="section-title">Scenario Parameters</h3>
+          <div class="form-group">
+            <label>Corporate Prize Amount (R)</label>
+            <input type="number" id="ins-prize" value="5000000" min="1000" class="input">
+          </div>
+          <div class="form-group">
+            <label>Home Team</label>
+            <select id="ins-home" class="select">
+              <option value="" disabled selected>Select</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Away Team</label>
+            <select id="ins-away" class="select">
+              <option value="" disabled selected>Select</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Payout Condition</label>
+            <select id="ins-condition" class="select">
+              <option value="home">Fan predicts Home Win</option>
+              <option value="draw">Fan predicts Draw</option>
+              <option value="away">Fan predicts Away Win</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Insurer Profit Margin (%)</label>
+            <input type="number" id="ins-margin" value="30" min="0" max="1000" class="input">
+          </div>
+          <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="calcInsurance()">Calculate
+            Premium</button>
+          <div id="ins-error" class="error-box" style="display:none"></div>
+        </div>
+        <div class="card flex-1" id="ins-result-box">
+          <div id="ins-placeholder" class="placeholder">
+            <div class="placeholder-icon">🛡</div>
+            <p>Configure scenario and calculate premium.</p>
+          </div>
+          <div id="ins-result" style="display:none">
+            <div class="ins-header">
+              <div class="ins-label">Underwriting Recommendation</div>
+              <div class="ins-premium" id="ins-premium-val"></div>
+              <div class="ins-sub">Upfront Premium Required</div>
+            </div>
+            <div class="ins-rows">
+              <div class="ins-row"><span>Event Probability</span><span class="badge-red" id="ins-prob"></span></div>
+              <div class="ins-row"><span>Total Liability (Prize)</span><span id="ins-prize-val"></span></div>
+              <div class="ins-row highlight"><span>Expected Loss (Base Cost)</span><span id="ins-loss"></span></div>
+              <div class="ins-row"><span>Profit Margin</span><span id="ins-margin-val"></span></div>
+              <div class="ins-row green-row"><span>Projected Long-Term Profit</span><span id="ins-profit"></span></div>
+            </div>
+            <div id="ins-interpretation"
+              style="display:none; margin-top:1.5rem; background:rgba(59,130,246,0.05); border: 1px dashed var(--blue); padding: 1.25rem; border-radius: 8px;">
+              <h4
+                style="font-size:0.85rem; margin-bottom:0.75rem; color:var(--blue); font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">
+                Underwriter's Interpretation</h4>
+              <p id="ins-interpretation-text" style="font-size:0.88rem; color:var(--text-muted); line-height:1.6"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- BATCH -->
+    <section id="page-batch" class="page">
+      <div class="page-header">
+        <h1>📁 Batch Predictor</h1>
+        <p>Upload a CSV with <code>HomeTeam</code> and <code>AwayTeam</code> columns.</p>
+      </div>
+      <div class="card">
+        <form onsubmit="batchPredict(event)">
+          <div class="dropzone" id="dropzone">
+            <input type="file" id="batch-file" accept=".csv" onchange="fileSelected(this)"
+              style="position:absolute;inset:0;opacity:0;cursor:pointer">
+            <div class="dropzone-icon">📂</div>
+            <div id="dropzone-label">Drag and drop or click to select CSV</div>
+          </div>
+          <button class="btn btn-primary" style="margin-top:1rem" type="submit">Upload &amp; Predict</button>
+        </form>
+      </div>
+      <div id="batch-results" style="display:none" class="card" style="padding:0;overflow:hidden">
+        <div style="overflow-x:auto">
+          <table id="batch-table" class="table">
+            <thead>
+              <tr>
+                <th>Home</th>
+                <th>Away</th>
+                <th>Home Win%</th>
+                <th>Draw%</th>
+                <th>Away Win%</th>
+                <th>Prediction</th>
+              </tr>
+            </thead>
+            <tbody id="batch-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
