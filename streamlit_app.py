@@ -275,32 +275,48 @@ st.markdown(f"""
     .stDataFrame [data-testid="stDataFrameResizable"] {{
         background: #1a1d27 !important;
     }}
-    /* Dataframe header and cells */
     .stDataFrame th, .stDataFrame td {{
         background: #1a1d27 !important; color: #e8eaf0 !important;
     }}
-    /* Column menu popup */
+    /* Glide DataGrid column menu & all floating popups */
     [data-testid="stDataFrameColumnMenu"],
-    div[role="menu"], div[role="listbox"] {{
+    div[role="menu"], div[role="listbox"],
+    .gdg-style, div[class*="portal"], div[class*="overlay"],
+    div[data-baseweb="popover"] > div {{
         background: #1a1d27 !important; color: #e8eaf0 !important;
         border: 1px solid #2a2f45 !important;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+        z-index: 100000 !important;
+    }}
+    /* Ensure popup items don't overlap */
+    div[role="menu"] *, div[role="listbox"] * {{
+        position: relative !important;
+        background: #1a1d27 !important;
     }}
 
     /* ── File uploader fix ── */
     [data-testid="stFileUploader"] {{
-        overflow: hidden;
-        background: rgba(26,29,39,0.9) !important;
+        background: #1a1d27 !important;
         border-radius: 12px; padding: 0.5rem;
+        overflow: hidden;
     }}
-    [data-testid="stFileUploader"] section {{ padding: 0; }}
+    [data-testid="stFileUploader"] section {{
+        padding: 0; background: #1a1d27 !important;
+    }}
     [data-testid="stFileUploader"] button {{
-        font-size: 0.82rem;
-        background: rgba(26,29,39,0.95) !important;
+        font-size: 0.82rem !important;
+        background: #252836 !important;
+        border: 1px solid #2a2f45 !important;
+        overflow: hidden !important;
+        max-width: 120px !important;
     }}
     [data-testid="stFileUploadDropzone"] {{
-        background: rgba(26,29,39,0.9) !important;
+        background: #1a1d27 !important;
         border-color: #2a2f45 !important;
+    }}
+    /* Hide duplicate small upload text */
+    [data-testid="stFileUploader"] small {{
+        display: none !important;
     }}
 
     /* ── Divider ── */
