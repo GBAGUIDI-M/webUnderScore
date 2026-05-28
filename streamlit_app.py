@@ -136,8 +136,22 @@ st.markdown(f"""
     }}
 
     /* ── Mobile: radio becomes bottom bar ── */
+    .mobile-logo {{ display: none; }}
     @media (max-width: 768px) {{
         .topnav {{ display: none !important; }}
+        .mobile-logo {{
+            display: block !important;
+            text-align: center; padding: 1rem 0 0.5rem 0;
+        }}
+        .mobile-logo .ml-title {{
+            font-size: 1.6rem; font-weight: 800; letter-spacing: -1px;
+        }}
+        .mobile-logo .ml-white {{ color: #fff; }}
+        .mobile-logo .ml-blue  {{ color: #3b82f6; text-shadow: 0 0 20px rgba(59,130,246,0.4); }}
+        .mobile-logo .ml-bar {{
+            height: 2px; width: 80px; margin: 6px auto 0 auto; border-radius: 2px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
+        }}
         div[data-testid="stRadio"] {{
             position: fixed !important; top: auto !important;
             bottom: 0 !important; left: 0 !important; right: 0 !important;
@@ -446,6 +460,10 @@ st.markdown(
     '<div class="topnav">'
     '  <div class="topnav-logo"><span class="logo-white">Under</span><span class="logo-blue">Score</span></div>'
     '  <div class="topnav-accent"></div>'
+    '</div>'
+    '<div class="mobile-logo">'
+    '  <div class="ml-title"><span class="ml-white">Under</span><span class="ml-blue">Score</span></div>'
+    '  <div class="ml-bar"></div>'
     '</div>',
     unsafe_allow_html=True,
 )
