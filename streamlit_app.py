@@ -268,19 +268,51 @@ st.markdown(f"""
     header {{visibility: hidden;}}
 
     /* ── Table ── */
-    .stDataFrame {{ border-radius: 12px; overflow: hidden; }}
+    .stDataFrame {{
+        border-radius: 12px; overflow: hidden;
+        background: #1a1d27 !important;
+    }}
+    .stDataFrame [data-testid="stDataFrameResizable"] {{
+        background: #1a1d27 !important;
+    }}
+    /* Dataframe header and cells */
+    .stDataFrame th, .stDataFrame td {{
+        background: #1a1d27 !important; color: #e8eaf0 !important;
+    }}
+    /* Column menu popup */
+    [data-testid="stDataFrameColumnMenu"],
+    div[role="menu"], div[role="listbox"] {{
+        background: #1a1d27 !important; color: #e8eaf0 !important;
+        border: 1px solid #2a2f45 !important;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+    }}
 
     /* ── File uploader fix ── */
-    [data-testid="stFileUploader"] {{ overflow: hidden; }}
+    [data-testid="stFileUploader"] {{
+        overflow: hidden;
+        background: rgba(26,29,39,0.9) !important;
+        border-radius: 12px; padding: 0.5rem;
+    }}
     [data-testid="stFileUploader"] section {{ padding: 0; }}
-    [data-testid="stFileUploader"] button {{ font-size: 0.82rem; }}
+    [data-testid="stFileUploader"] button {{
+        font-size: 0.82rem;
+        background: rgba(26,29,39,0.95) !important;
+    }}
+    [data-testid="stFileUploadDropzone"] {{
+        background: rgba(26,29,39,0.9) !important;
+        border-color: #2a2f45 !important;
+    }}
 
     /* ── Divider ── */
     .section-divider {{ height: 1px; background: linear-gradient(90deg, transparent, #2a2f45, transparent); margin: 1.5rem 0; }}
 
     /* ── Streamlit elements polish ── */
-    .stSelectbox > div > div {{ background: rgba(26,29,39,0.8); border-color: #2a2f45; }}
-    .stNumberInput > div > div > input {{ background: rgba(26,29,39,0.8); }}
+    .stSelectbox > div > div {{ background: #1a1d27 !important; border-color: #2a2f45 !important; }}
+    .stNumberInput > div > div > input {{ background: #1a1d27 !important; border-color: #2a2f45 !important; }}
+    /* All dropdowns/popups opaque */
+    [data-baseweb="popover"], [data-baseweb="menu"], [data-baseweb="select"] > div {{
+        background: #1a1d27 !important;
+    }}
     button[kind="primary"] {{
         background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
         border: none !important;
