@@ -267,31 +267,28 @@ st.markdown(f"""
     footer {{visibility: hidden;}}
     header {{visibility: hidden;}}
 
-    /* ── Table ── */
-    .stDataFrame {{
+    /* ── Table (st.table) ── */
+    .stTable {{
         border-radius: 12px; overflow: hidden;
-        background: #1a1d27 !important;
     }}
-    .stDataFrame [data-testid="stDataFrameResizable"] {{
+    .stTable table {{
         background: #1a1d27 !important;
+        width: 100%;
+        border-collapse: collapse;
     }}
-    .stDataFrame th, .stDataFrame td {{
+    .stTable th {{
+        background: #252836 !important; color: #8892a4 !important;
+        font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;
+        padding: 0.75rem 1rem !important;
+        border-bottom: 1px solid #2a2f45 !important;
+    }}
+    .stTable td {{
         background: #1a1d27 !important; color: #e8eaf0 !important;
+        padding: 0.6rem 1rem !important;
+        border-bottom: 1px solid rgba(42,47,69,0.5) !important;
     }}
-    /* Glide DataGrid column menu & all floating popups */
-    [data-testid="stDataFrameColumnMenu"],
-    div[role="menu"], div[role="listbox"],
-    .gdg-style, div[class*="portal"], div[class*="overlay"],
-    div[data-baseweb="popover"] > div {{
-        background: #1a1d27 !important; color: #e8eaf0 !important;
-        border: 1px solid #2a2f45 !important;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
-        z-index: 100000 !important;
-    }}
-    /* Ensure popup items don't overlap */
-    div[role="menu"] *, div[role="listbox"] * {{
-        position: relative !important;
-        background: #1a1d27 !important;
+    .stTable tr:hover td {{
+        background: #1f2233 !important;
     }}
 
     /* ── File uploader fix ── */
@@ -581,7 +578,7 @@ if page == "Dashboard":
             elo_df.index = range(1, len(elo_df) + 1)
             elo_df.index.name = "Rank"
             elo_df["ELO Rating"] = elo_df["ELO Rating"].round(1)
-            st.dataframe(elo_df, use_container_width=True, height=500)
+            st.table(elo_df)
         else:
             st.warning("Model not trained yet.")
 
@@ -833,16 +830,7 @@ elif page == "Batch Predict":
                 res_df = pd.DataFrame(results)
 
                 st.markdown(f"### Results — {len(res_df)} matches")
-                st.dataframe(
-                    res_df,
-                    use_container_width=True,
-                    hide_index=True,
-                    column_config={
-                        "Home Win %": st.column_config.NumberColumn(format="%.2f%%"),
-                        "Draw %": st.column_config.NumberColumn(format="%.2f%%"),
-                        "Away Win %": st.column_config.NumberColumn(format="%.2f%%"),
-                    },
-                )
+                st.table(res_df)
 
                 # Download button
                 csv = res_df.to_csv(index=False)
